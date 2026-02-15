@@ -151,6 +151,11 @@ export async function renderHtmlElement(
       renderFormContent(element, styles, box, ctx, group);
     }
 
+    // List markers (::marker for display:list-item)
+    if (styles.display === "list-item") {
+      renderListMarker(element, styles, box, ctx, group);
+    }
+
     // Pseudo-elements (::before, ::after)
     await renderPseudoElement(element, "::before", rootElement, ctx, group);
   }
@@ -370,6 +375,70 @@ function applyClipMask(
   wrapper.setAttribute("mask", `url(#${maskId})`);
   wrapper.appendChild(target);
   group.appendChild(wrapper);
+}
+
+/** Render list item marker (bullet, number, custom ::marker content) */
+function renderListMarker(
+  element: Element,
+  styles: CSSStyleDeclaration,
+  box: BoxGeometry,
+  ctx: RenderContext,
+  group: SVGGElement,
+): void {
+  // Try to get ::marker content via getComputedStyle
+  let markerText = "";
+  try {
+    const markerStyles = window.getComputedStyle(element, "::marker");
+    const content = markerStyles.content;
+    if (content && content !== "none" && content !== "normal") {
+      markerText = content.replace(/^["']|["']$/g, "");
+    }
+  } catch {
+    // ::marker pseudo-element not supported in this browser
+  }
+
+  // Fallback: generate marker from listStyleType
+  if (!markerText) {
+    const listStyleType = styles.listStyleType;
+    if (listStyleType === "none") return;
+
+    if (listStyleType === "disc") {
+      markerText = "\u2022"; // •
+    } else if (listStyleType === "circle") {
+      markerText = "\u25CB"; // ○
+    } else if (listStyleType === "square") {
+      markerText = "\u25A0"; // ■
+    } else if (listStyleType === "decimal" || listStyleType === "" || !listStyleType) {
+      // Count preceding siblings to determine number
+      let count = 1;
+      let sibling = element.previousElementSibling;
+      while (sibling) {
+        const sibStyles = window.getComputedStyle(sibling);
+        if (sibStyles.display === "list-item") count++;
+        sibling = sibling.previousElementSibling;
+      }
+      markerText = `${count}.`;
+    } else {
+      markerText = "\u2022"; // default bullet
+    }
+  }
+
+  if (!markerText) return;
+
+  const fontSize = parseFloat(styles.fontSize) || 16;
+  const paddingLeft = parseFloat(styles.paddingLeft) || 0;
+
+  const textEl = createSvgElement(ctx.svgDocument, "text");
+  setAttributes(textEl, {
+    x: (box.x - paddingLeft / 2).toFixed(2),
+    y: (box.y + fontSize * 0.8).toFixed(2),
+    "font-family": styles.fontFamily,
+    "font-size": styles.fontSize,
+    fill: styles.color,
+    "text-anchor": "end",
+  });
+  textEl.textContent = markerText;
+  group.appendChild(textEl);
 }
 
 /** Render form element text content (value, placeholder, selected option) */
