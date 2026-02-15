@@ -163,12 +163,14 @@ export async function renderHtmlElement(
   await renderPseudoElement(element, "::before", rootElement, ctx, group);
 
   // Overflow clipping — wrap children in a mask group.
-  // Skip for the root element when there's no border-radius: the SVG viewBox
-  // already provides rectangular clipping, and a redundant mask can cause
-  // subpixel edge truncation. Keep the mask when there IS radius, since the
-  // viewBox can't clip to rounded corners.
+  // For the root element with border-radius, pad the mask box by 1px so the
+  // straight edges don't cause subpixel truncation while corners still clip.
+  // Skip entirely for root without radius — the viewBox handles it.
   if (hasOverflowClip(styles) && (element !== rootElement || hasRadius(radii))) {
-    const maskGroup = createOverflowMask(box, radii, ctx);
+    const maskBox = element === rootElement
+      ? { x: box.x - 1, y: box.y - 1, width: box.width + 2, height: box.height + 2 }
+      : box;
+    const maskGroup = createOverflowMask(maskBox, radii, ctx);
     group.appendChild(maskGroup);
     // The caller should append children to this maskGroup
     (group as any).__childTarget = maskGroup;
