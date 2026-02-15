@@ -1,7 +1,7 @@
 {
   "name": "dom2svg",
   "version": "0.1.0",
-  "description": "Convert DOM elements (hybrid HTML/SVG) to clean, self-contained SVG files",
+  "description": "Convert DOM elements to clean, self-contained SVG files. Built for exporting node-based editors to vector graphics.",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -23,6 +23,29 @@
     "test:watch": "vitest",
     "demo": "vite --config demo/vite.config.ts"
   },
+  "keywords": [
+    "svg",
+    "dom",
+    "html-to-svg",
+    "dom-to-svg",
+    "export",
+    "screenshot",
+    "node-editor",
+    "react-flow",
+    "svelteflow",
+    "vector-graphics",
+    "canvas",
+    "css"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/milanofthe/dom2svg.git"
+  },
+  "homepage": "https://github.com/milanofthe/dom2svg",
+  "bugs": {
+    "url": "https://github.com/milanofthe/dom2svg/issues"
+  },
+  "author": "milanofthe",
   "dependencies": {
     "opentype.js": "^1.3.4"
   },
