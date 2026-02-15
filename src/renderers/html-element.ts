@@ -1,0 +1,395 @@
+import type { RenderContext, BorderRadii, BoxGeometry } from "../types.js";
+import {
+  createSvgElement,
+  setAttributes,
+  isImageElement,
+  isCanvasElement,
+  getPseudoStyles,
+} from "../utils/dom.js";
+import { getRelativeBox } from "../utils/geometry.js";
+import {
+  parseBorders,
+  parseBorderRadii,
+  hasBorder,
+  hasRadius,
+  isUniformRadius,
+  hasOverflowClip,
+  parseBackgroundColor,
+  hasBackgroundImage,
+} from "../core/styles.js";
+import { parseLinearGradient, createSvgLinearGradient } from "../assets/gradients.js";
+import { imageToDataUrl, extractUrlFromCss, canvasToDataUrl } from "../assets/images.js";
+
+/**
+ * Render an HTML element's visual properties (background, borders, overflow mask).
+ * Returns a group containing the element's own visuals.
+ * Children are rendered separately by the traversal engine.
+ */
+export async function renderHtmlElement(
+  element: Element,
+  rootElement: Element,
+  ctx: RenderContext,
+): Promise<SVGGElement> {
+  const group = createSvgElement(ctx.svgDocument, "g") as SVGGElement;
+  const styles = window.getComputedStyle(element);
+  const box = getRelativeBox(element, rootElement);
+  const radii = parseBorderRadii(styles);
+
+  // Background color
+  const bgColor = parseBackgroundColor(styles);
+  if (bgColor) {
+    const rect = createBoxRect(box, radii, ctx);
+    rect.setAttribute("fill", bgColor);
+    group.appendChild(rect);
+  }
+
+  // Background image (gradients)
+  if (hasBackgroundImage(styles)) {
+    const bgImage = styles.backgroundImage;
+    const gradient = parseLinearGradient(bgImage);
+    if (gradient) {
+      const gradientEl = createSvgLinearGradient(gradient, ctx);
+      const rect = createBoxRect(box, radii, ctx);
+      rect.setAttribute("fill", `url(#${gradientEl.getAttribute("id")})`);
+      group.appendChild(rect);
+    } else {
+      // Background image URL
+      const url = extractUrlFromCss(bgImage);
+      if (url) {
+        const dataUrl = await imageToDataUrl(url);
+        const imgEl = createSvgElement(ctx.svgDocument, "image");
+        setAttributes(imgEl, {
+          x: box.x,
+          y: box.y,
+          width: box.width,
+          height: box.height,
+          href: dataUrl,
+          preserveAspectRatio: "none",
+        });
+        if (hasRadius(radii)) {
+          applyClipMask(imgEl, box, radii, ctx, group);
+        } else {
+          group.appendChild(imgEl);
+        }
+      }
+    }
+  }
+
+  // Borders
+  const borders = parseBorders(styles);
+  if (hasBorder(borders)) {
+    renderBorders(group, box, borders, radii, ctx);
+  }
+
+  // <img> element
+  if (isImageElement(element) && element.src) {
+    const dataUrl = await imageToDataUrl(element.src);
+    const imgEl = createSvgElement(ctx.svgDocument, "image");
+    setAttributes(imgEl, {
+      x: box.x,
+      y: box.y,
+      width: box.width,
+      height: box.height,
+      href: dataUrl,
+    });
+    if (element.style.objectFit === "contain") {
+      imgEl.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    } else if (element.style.objectFit === "cover") {
+      imgEl.setAttribute("preserveAspectRatio", "xMidYMid slice");
+    }
+    group.appendChild(imgEl);
+  }
+
+  // <canvas> element
+  if (isCanvasElement(element)) {
+    const dataUrl = canvasToDataUrl(element);
+    if (dataUrl) {
+      const imgEl = createSvgElement(ctx.svgDocument, "image");
+      setAttributes(imgEl, {
+        x: box.x,
+        y: box.y,
+        width: box.width,
+        height: box.height,
+        href: dataUrl,
+      });
+      group.appendChild(imgEl);
+    }
+  }
+
+  // Pseudo-elements (::before, ::after)
+  await renderPseudoElement(element, "::before", rootElement, ctx, group);
+
+  // Overflow clipping — wrap children in a mask group
+  if (hasOverflowClip(styles)) {
+    const maskGroup = createOverflowMask(box, radii, ctx);
+    group.appendChild(maskGroup);
+    // The caller should append children to this maskGroup
+    (group as any).__childTarget = maskGroup;
+  }
+
+  return group;
+}
+
+/**
+ * Render the ::after pseudo-element. Called after children are appended.
+ */
+export async function renderPseudoAfter(
+  element: Element,
+  rootElement: Element,
+  ctx: RenderContext,
+  group: SVGGElement,
+): Promise<void> {
+  await renderPseudoElement(element, "::after", rootElement, ctx, group);
+}
+
+/** Get the child target group (mask group if overflow:hidden, else the group itself) */
+export function getChildTarget(group: SVGGElement): SVGElement {
+  return (group as any).__childTarget ?? group;
+}
+
+/** Create an SVG rect or rounded rect for a box */
+function createBoxRect(
+  box: BoxGeometry,
+  radii: BorderRadii,
+  ctx: RenderContext,
+): SVGRectElement {
+  const rect = createSvgElement(ctx.svgDocument, "rect");
+  setAttributes(rect, {
+    x: box.x,
+    y: box.y,
+    width: box.width,
+    height: box.height,
+  });
+
+  if (hasRadius(radii) && isUniformRadius(radii)) {
+    setAttributes(rect, {
+      rx: radii.topLeft[0],
+      ry: radii.topLeft[1],
+    });
+  }
+
+  return rect;
+}
+
+/** Render borders as SVG rects (strokes) */
+function renderBorders(
+  group: SVGGElement,
+  box: BoxGeometry,
+  borders: ReturnType<typeof parseBorders>,
+  radii: BorderRadii,
+  ctx: RenderContext,
+): void {
+  // For uniform borders, use a single stroked rect
+  if (
+    borders.top.width === borders.right.width &&
+    borders.right.width === borders.bottom.width &&
+    borders.bottom.width === borders.left.width &&
+    borders.top.color === borders.right.color &&
+    borders.right.color === borders.bottom.color &&
+    borders.bottom.color === borders.left.color &&
+    borders.top.style === borders.right.style &&
+    borders.top.width > 0 &&
+    borders.top.style !== "none"
+  ) {
+    const halfW = borders.top.width / 2;
+    const rect = createSvgElement(ctx.svgDocument, "rect");
+    setAttributes(rect, {
+      x: box.x + halfW,
+      y: box.y + halfW,
+      width: Math.max(0, box.width - borders.top.width),
+      height: Math.max(0, box.height - borders.top.width),
+      fill: "none",
+      stroke: borders.top.color,
+      "stroke-width": borders.top.width,
+    });
+
+    if (hasRadius(radii) && isUniformRadius(radii)) {
+      const rx = Math.max(0, radii.topLeft[0] - halfW);
+      const ry = Math.max(0, radii.topLeft[1] - halfW);
+      setAttributes(rect, { rx, ry });
+    }
+
+    group.appendChild(rect);
+    return;
+  }
+
+  // Non-uniform borders: render each side as a line
+  const { x, y, width, height } = box;
+
+  if (borders.top.width > 0 && borders.top.style !== "none") {
+    const line = createSvgElement(ctx.svgDocument, "line");
+    setAttributes(line, {
+      x1: x,
+      y1: y + borders.top.width / 2,
+      x2: x + width,
+      y2: y + borders.top.width / 2,
+      stroke: borders.top.color,
+      "stroke-width": borders.top.width,
+    });
+    group.appendChild(line);
+  }
+
+  if (borders.right.width > 0 && borders.right.style !== "none") {
+    const line = createSvgElement(ctx.svgDocument, "line");
+    setAttributes(line, {
+      x1: x + width - borders.right.width / 2,
+      y1: y,
+      x2: x + width - borders.right.width / 2,
+      y2: y + height,
+      stroke: borders.right.color,
+      "stroke-width": borders.right.width,
+    });
+    group.appendChild(line);
+  }
+
+  if (borders.bottom.width > 0 && borders.bottom.style !== "none") {
+    const line = createSvgElement(ctx.svgDocument, "line");
+    setAttributes(line, {
+      x1: x,
+      y1: y + height - borders.bottom.width / 2,
+      x2: x + width,
+      y2: y + height - borders.bottom.width / 2,
+      stroke: borders.bottom.color,
+      "stroke-width": borders.bottom.width,
+    });
+    group.appendChild(line);
+  }
+
+  if (borders.left.width > 0 && borders.left.style !== "none") {
+    const line = createSvgElement(ctx.svgDocument, "line");
+    setAttributes(line, {
+      x1: x + borders.left.width / 2,
+      y1: y,
+      x2: x + borders.left.width / 2,
+      y2: y + height,
+      stroke: borders.left.color,
+      "stroke-width": borders.left.width,
+    });
+    group.appendChild(line);
+  }
+}
+
+/** Create an overflow mask using <mask> for Figma compatibility */
+function createOverflowMask(
+  box: BoxGeometry,
+  radii: BorderRadii,
+  ctx: RenderContext,
+): SVGGElement {
+  const maskId = ctx.idGenerator.next("mask");
+  const mask = createSvgElement(ctx.svgDocument, "mask");
+  mask.setAttribute("id", maskId);
+
+  const maskRect = createBoxRect(box, radii, ctx);
+  maskRect.setAttribute("fill", "white");
+  mask.appendChild(maskRect);
+  ctx.defs.appendChild(mask);
+
+  const masked = createSvgElement(ctx.svgDocument, "g") as SVGGElement;
+  masked.setAttribute("mask", `url(#${maskId})`);
+
+  return masked;
+}
+
+/** Apply a clip mask to a single element */
+function applyClipMask(
+  target: SVGElement,
+  box: BoxGeometry,
+  radii: BorderRadii,
+  ctx: RenderContext,
+  group: SVGGElement,
+): void {
+  const maskId = ctx.idGenerator.next("mask");
+  const mask = createSvgElement(ctx.svgDocument, "mask");
+  mask.setAttribute("id", maskId);
+
+  const maskRect = createBoxRect(box, radii, ctx);
+  maskRect.setAttribute("fill", "white");
+  mask.appendChild(maskRect);
+  ctx.defs.appendChild(mask);
+
+  const wrapper = createSvgElement(ctx.svgDocument, "g");
+  wrapper.setAttribute("mask", `url(#${maskId})`);
+  wrapper.appendChild(target);
+  group.appendChild(wrapper);
+}
+
+/** Render a pseudo-element (::before or ::after) */
+async function renderPseudoElement(
+  element: Element,
+  pseudo: "::before" | "::after",
+  rootElement: Element,
+  ctx: RenderContext,
+  group: SVGGElement,
+): Promise<void> {
+  const styles = getPseudoStyles(element, pseudo);
+  const content = styles.content;
+
+  // No content or empty
+  if (!content || content === "none" || content === "normal" || content === '""') {
+    return;
+  }
+
+  // Extract text content (strip quotes)
+  let text = content.replace(/^["']|["']$/g, "");
+  if (!text) return;
+
+  const parentBox = getRelativeBox(element, rootElement);
+  const fontSize = parseFloat(styles.fontSize) || 16;
+
+  // Create a text element for the pseudo content
+  const textEl = createSvgElement(ctx.svgDocument, "text");
+  setAttributes(textEl, {
+    "font-family": styles.fontFamily,
+    "font-size": styles.fontSize,
+    "font-weight": styles.fontWeight,
+    "font-style": styles.fontStyle,
+    fill: styles.color,
+  });
+
+  // Position based on pseudo type
+  if (pseudo === "::before") {
+    setAttributes(textEl, {
+      x: parentBox.x,
+      y: parentBox.y + fontSize * 0.85,
+    });
+  } else {
+    setAttributes(textEl, {
+      x: parentBox.x + parentBox.width,
+      y: parentBox.y + fontSize * 0.85,
+      "text-anchor": "end",
+    });
+  }
+
+  textEl.textContent = text;
+
+  // Background for pseudo-element
+  const bgColor = parseBackgroundColor(styles);
+  if (bgColor) {
+    // Inject a temporary span to measure the pseudo-element
+    const span = document.createElement("span");
+    span.style.cssText = `
+      font-family: ${styles.fontFamily};
+      font-size: ${styles.fontSize};
+      font-weight: ${styles.fontWeight};
+      visibility: hidden;
+      position: absolute;
+    `;
+    span.textContent = text;
+    document.body.appendChild(span);
+    const width = span.offsetWidth;
+    const height = span.offsetHeight;
+    document.body.removeChild(span);
+
+    const bgRect = createSvgElement(ctx.svgDocument, "rect");
+    setAttributes(bgRect, {
+      x: pseudo === "::before" ? parentBox.x : parentBox.x + parentBox.width - width,
+      y: parentBox.y,
+      width,
+      height,
+      fill: bgColor,
+    });
+    group.appendChild(bgRect);
+  }
+
+  group.appendChild(textEl);
+}
