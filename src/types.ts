@@ -1,0 +1,146 @@
+/** Configuration for a single font face */
+export interface FontConfig {
+  url: string;
+  weight?: string | number;
+  style?: string;
+}
+
+/** Font mapping: family name → URL string or detailed config */
+export type FontMapping = Record<string, string | FontConfig>;
+
+/** Options for domToSvg() */
+export interface DomToSvgOptions {
+  /** Map of font-family → URL or FontConfig for text-to-path conversion */
+  fonts?: FontMapping;
+  /** CSS selector or predicate to exclude elements */
+  exclude?: string | ((element: Element) => boolean);
+  /** Custom handler for specific elements — return SVGElement or null to skip */
+  handler?: (element: Element, context: RenderContext) => SVGElement | null;
+  /** Background color for the root SVG (default: transparent) */
+  background?: string;
+  /** Extra padding around the captured area in px */
+  padding?: number;
+  /** Whether to convert text to paths using opentype.js (default: false) */
+  textToPath?: boolean;
+}
+
+/** Internal render context passed through the tree */
+export interface RenderContext {
+  /** The output SVG document */
+  svgDocument: Document;
+  /** The <defs> element for shared definitions */
+  defs: SVGDefsElement;
+  /** ID generator for unique IDs */
+  idGenerator: IdGenerator;
+  /** Options from the caller */
+  options: DomToSvgOptions;
+  /** Font cache (available when textToPath is enabled) */
+  fontCache?: FontCache;
+  /** Current inherited opacity */
+  opacity: number;
+}
+
+/** A stacking context node for CSS 2.1 painting order */
+export interface StackingContext {
+  element: Element;
+  children: StackingContextChild[];
+  zIndex: number;
+  opacity: number;
+}
+
+/** Union type for items within a stacking context */
+export type StackingContextChild =
+  | { type: "stacking-context"; context: StackingContext }
+  | { type: "block"; element: Element }
+  | { type: "float"; element: Element }
+  | { type: "inline"; element: Element }
+  | { type: "positioned"; element: Element; zIndex: number };
+
+/** Stacking layer indices (CSS 2.1 Appendix E) */
+export enum StackingLayer {
+  BackgroundBorder = 0,
+  NegativeZIndex = 1,
+  BlockFlowNonPositioned = 2,
+  FloatNonPositioned = 3,
+  InlineFlowNonPositioned = 4,
+  PositionedZeroAuto = 5,
+  PositiveZIndex = 6,
+}
+
+/** Parsed CSS border side */
+export interface BorderSide {
+  width: number;
+  style: string;
+  color: string;
+}
+
+/** Parsed CSS borders */
+export interface Borders {
+  top: BorderSide;
+  right: BorderSide;
+  bottom: BorderSide;
+  left: BorderSide;
+}
+
+/** Parsed border-radius values (in px) */
+export interface BorderRadii {
+  topLeft: [number, number];
+  topRight: [number, number];
+  bottomRight: [number, number];
+  bottomLeft: [number, number];
+}
+
+/** Parsed CSS box */
+export interface BoxGeometry {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** CSS transform function */
+export type TransformFunction =
+  | { type: "matrix"; values: [number, number, number, number, number, number] }
+  | { type: "translate"; x: number; y: number }
+  | { type: "scale"; x: number; y: number }
+  | { type: "rotate"; angle: number }
+  | { type: "skewX"; angle: number }
+  | { type: "skewY"; angle: number };
+
+/** 2D affine transform matrix [a, b, c, d, e, f] */
+export type MatrixTuple = [number, number, number, number, number, number];
+
+/** Parsed linear gradient */
+export interface LinearGradient {
+  angle: number;
+  stops: GradientStop[];
+}
+
+/** A single gradient color stop */
+export interface GradientStop {
+  color: string;
+  position: number;
+}
+
+/** Interface for unique ID generation */
+export interface IdGenerator {
+  next(prefix?: string): string;
+}
+
+/** Interface for the font cache */
+export interface FontCache {
+  getFont(family: string, weight?: string | number, style?: string): Promise<any>;
+  has(family: string): boolean;
+}
+
+/** Result of domToSvg() */
+export interface DomToSvgResult {
+  /** The generated SVG element */
+  svg: SVGSVGElement;
+  /** Serialize to SVG string */
+  toString(): string;
+  /** Serialize to a Blob */
+  toBlob(): Blob;
+  /** Trigger a download in the browser */
+  download(filename?: string): void;
+}
