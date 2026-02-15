@@ -73,26 +73,13 @@ export function textToPath(
   x: number,
   y: number,
   fontSize: number,
-): string {
-  const path = font.getPath(text, x, y, fontSize);
-  return path.toPathData(2);
-}
-
-/**
- * Measure the width of text using an opentype.js font.
- */
-export function measureText(
-  font: any,
-  text: string,
-  fontSize: number,
-): number {
-  const scale = fontSize / font.unitsPerEm;
-  let width = 0;
-  const glyphs = font.stringToGlyphs(text);
-  for (const glyph of glyphs) {
-    width += (glyph.advanceWidth ?? 0) * scale;
+): string | null {
+  try {
+    const path = font.getPath(text, x, y, fontSize);
+    return path.toPathData(2);
+  } catch {
+    return null;
   }
-  return width;
 }
 
 /**

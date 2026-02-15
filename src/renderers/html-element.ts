@@ -6,7 +6,7 @@ import {
   isCanvasElement,
   getPseudoStyles,
 } from "../utils/dom.js";
-import { getRelativeBox } from "../utils/geometry.js";
+import { getRelativeBox, buildRoundedRectPath } from "../utils/geometry.js";
 import {
   parseBorders,
   parseBorderRadii,
@@ -17,6 +17,7 @@ import {
   hasOverflowClip,
   parseBackgroundColor,
   hasBackgroundImage,
+  isVisibilityHidden,
 } from "../core/styles.js";
 import { parseLinearGradient, createSvgLinearGradient, rasterizeGradient } from "../assets/gradients.js";
 import { imageToDataUrl, extractUrlFromCss, canvasToDataUrl } from "../assets/images.js";
@@ -38,7 +39,7 @@ export async function renderHtmlElement(
   const box = getRelativeBox(element, rootElement);
   const radii = clampRadii(parseBorderRadii(styles), box.width, box.height);
 
-  // CSS Transforms
+  // CSS Transforms (applied even when visibility:hidden for layout)
   if (styles.transform && styles.transform !== "none") {
     const svgTransform = cssTransformToSvg(
       styles.transform,
@@ -50,103 +51,87 @@ export async function renderHtmlElement(
     }
   }
 
-  // CSS Filters (drop-shadow)
-  if (styles.filter && styles.filter !== "none") {
-    const filterId = createDropShadowFilter(styles.filter, ctx);
-    if (filterId) {
-      group.setAttribute("filter", `url(#${filterId})`);
+  // Skip own visuals when visibility:hidden, but keep the group
+  // so visible children can still be rendered inside it.
+  const hidden = isVisibilityHidden(styles);
+
+  if (!hidden) {
+    // CSS Filters (drop-shadow)
+    if (styles.filter && styles.filter !== "none") {
+      const filterId = createDropShadowFilter(styles.filter, ctx);
+      if (filterId) {
+        group.setAttribute("filter", `url(#${filterId})`);
+      }
     }
-  }
 
-  // Background color
-  const bgColor = parseBackgroundColor(styles);
-  if (bgColor) {
-    const rect = createBoxShape(box, radii, ctx);
-    rect.setAttribute("fill", bgColor);
-    group.appendChild(rect);
-  }
-
-  // Background image (gradients)
-  if (hasBackgroundImage(styles)) {
-    const bgImage = styles.backgroundImage;
-    const gradient = parseLinearGradient(bgImage);
-    if (gradient) {
-      const gradientEl = createSvgLinearGradient(gradient, ctx);
+    // Background color
+    const bgColor = parseBackgroundColor(styles);
+    if (bgColor) {
       const rect = createBoxShape(box, radii, ctx);
-      rect.setAttribute("fill", `url(#${gradientEl.getAttribute("id")})`);
+      rect.setAttribute("fill", bgColor);
       group.appendChild(rect);
-    } else {
-      // Conic / radial gradient — rasterize via Canvas 2D API
-      const rasterized = rasterizeGradient(bgImage, box.width, box.height);
-      if (rasterized) {
-        const imgEl = createSvgElement(ctx.svgDocument, "image");
-        setAttributes(imgEl, {
-          x: box.x,
-          y: box.y,
-          width: box.width,
-          height: box.height,
-          href: rasterized,
-          preserveAspectRatio: "none",
-        });
-        if (hasRadius(radii)) {
-          applyClipMask(imgEl, box, radii, ctx, group);
-        } else {
-          group.appendChild(imgEl);
-        }
-      }
+    }
 
-      // Background image URL
-      const url = !rasterized ? extractUrlFromCss(bgImage) : null;
-      if (url) {
-        const dataUrl = await imageToDataUrl(url);
-        const imgEl = createSvgElement(ctx.svgDocument, "image");
-        setAttributes(imgEl, {
-          x: box.x,
-          y: box.y,
-          width: box.width,
-          height: box.height,
-          href: dataUrl,
-          preserveAspectRatio: "none",
-        });
-        if (hasRadius(radii)) {
-          applyClipMask(imgEl, box, radii, ctx, group);
-        } else {
-          group.appendChild(imgEl);
+    // Background image (gradients)
+    if (hasBackgroundImage(styles)) {
+      const bgImage = styles.backgroundImage;
+      const gradient = parseLinearGradient(bgImage);
+      if (gradient) {
+        const gradientEl = createSvgLinearGradient(gradient, box, ctx);
+        const rect = createBoxShape(box, radii, ctx);
+        rect.setAttribute("fill", `url(#${gradientEl.getAttribute("id")})`);
+        group.appendChild(rect);
+      } else {
+        // Conic / radial gradient — rasterize via Canvas 2D API
+        const rasterized = rasterizeGradient(bgImage, box.width, box.height);
+        if (rasterized) {
+          const imgEl = createSvgElement(ctx.svgDocument, "image");
+          setAttributes(imgEl, {
+            x: box.x,
+            y: box.y,
+            width: box.width,
+            height: box.height,
+            href: rasterized,
+            preserveAspectRatio: "none",
+          });
+          if (hasRadius(radii)) {
+            applyClipMask(imgEl, box, radii, ctx, group);
+          } else {
+            group.appendChild(imgEl);
+          }
+        }
+
+        // Background image URL
+        const url = !rasterized ? extractUrlFromCss(bgImage) : null;
+        if (url) {
+          const dataUrl = await imageToDataUrl(url);
+          const imgEl = createSvgElement(ctx.svgDocument, "image");
+          setAttributes(imgEl, {
+            x: box.x,
+            y: box.y,
+            width: box.width,
+            height: box.height,
+            href: dataUrl,
+            preserveAspectRatio: "none",
+          });
+          if (hasRadius(radii)) {
+            applyClipMask(imgEl, box, radii, ctx, group);
+          } else {
+            group.appendChild(imgEl);
+          }
         }
       }
     }
-  }
 
-  // Borders
-  const borders = parseBorders(styles);
-  if (hasBorder(borders)) {
-    renderBorders(group, box, borders, radii, ctx);
-  }
-
-  // <img> element
-  if (isImageElement(element) && element.src) {
-    const dataUrl = await imageToDataUrl(element.src);
-    const imgEl = createSvgElement(ctx.svgDocument, "image");
-    setAttributes(imgEl, {
-      x: box.x,
-      y: box.y,
-      width: box.width,
-      height: box.height,
-      href: dataUrl,
-    });
-    const objectFit = styles.objectFit || element.style.objectFit;
-    if (objectFit === "contain") {
-      imgEl.setAttribute("preserveAspectRatio", "xMidYMid meet");
-    } else if (objectFit === "cover") {
-      imgEl.setAttribute("preserveAspectRatio", "xMidYMid slice");
+    // Borders
+    const borders = parseBorders(styles);
+    if (hasBorder(borders)) {
+      renderBorders(group, box, borders, radii, ctx);
     }
-    group.appendChild(imgEl);
-  }
 
-  // <canvas> element
-  if (isCanvasElement(element)) {
-    const dataUrl = canvasToDataUrl(element);
-    if (dataUrl) {
+    // <img> element
+    if (isImageElement(element) && element.src) {
+      const dataUrl = await imageToDataUrl(element.src);
       const imgEl = createSvgElement(ctx.svgDocument, "image");
       setAttributes(imgEl, {
         x: box.x,
@@ -155,12 +140,36 @@ export async function renderHtmlElement(
         height: box.height,
         href: dataUrl,
       });
+      const objectFit = styles.objectFit || element.style.objectFit;
+      if (objectFit === "fill" || objectFit === "") {
+        imgEl.setAttribute("preserveAspectRatio", "none");
+      } else if (objectFit === "contain" || objectFit === "scale-down") {
+        imgEl.setAttribute("preserveAspectRatio", "xMidYMid meet");
+      } else if (objectFit === "cover") {
+        imgEl.setAttribute("preserveAspectRatio", "xMidYMid slice");
+      }
       group.appendChild(imgEl);
     }
-  }
 
-  // Pseudo-elements (::before, ::after)
-  await renderPseudoElement(element, "::before", rootElement, ctx, group);
+    // <canvas> element
+    if (isCanvasElement(element)) {
+      const dataUrl = canvasToDataUrl(element);
+      if (dataUrl) {
+        const imgEl = createSvgElement(ctx.svgDocument, "image");
+        setAttributes(imgEl, {
+          x: box.x,
+          y: box.y,
+          width: box.width,
+          height: box.height,
+          href: dataUrl,
+        });
+        group.appendChild(imgEl);
+      }
+    }
+
+    // Pseudo-elements (::before, ::after)
+    await renderPseudoElement(element, "::before", rootElement, ctx, group);
+  }
 
   // Overflow clipping — wrap children in a mask group.
   // Skip for the root element: its border-radius clipping is handled at
@@ -229,30 +238,8 @@ function createRoundedRectPath(
   radii: BorderRadii,
   ctx: RenderContext,
 ): SVGPathElement {
-  const { x, y, width, height } = box;
-  const [tlx, tly] = radii.topLeft;
-  const [trx, try_] = radii.topRight;
-  const [brx, bry] = radii.bottomRight;
-  const [blx, bly] = radii.bottomLeft;
-
-  // Build path with elliptical arcs for each corner
-  const d = [
-    `M ${x + tlx} ${y}`,
-    `L ${x + width - trx} ${y}`,
-    trx || try_ ? `A ${trx} ${try_} 0 0 1 ${x + width} ${y + try_}` : "",
-    `L ${x + width} ${y + height - bry}`,
-    brx || bry ? `A ${brx} ${bry} 0 0 1 ${x + width - brx} ${y + height}` : "",
-    `L ${x + blx} ${y + height}`,
-    blx || bly ? `A ${blx} ${bly} 0 0 1 ${x} ${y + height - bly}` : "",
-    `L ${x} ${y + tly}`,
-    tlx || tly ? `A ${tlx} ${tly} 0 0 1 ${x + tlx} ${y}` : "",
-    "Z",
-  ]
-    .filter(Boolean)
-    .join(" ");
-
   const path = createSvgElement(ctx.svgDocument, "path");
-  path.setAttribute("d", d);
+  path.setAttribute("d", buildRoundedRectPath(box.x, box.y, box.width, box.height, radii));
   return path;
 }
 
@@ -314,8 +301,9 @@ function renderBorders(
     return;
   }
 
-  // Non-uniform borders: render each side as a trapezoid path
-  // so corners connect diagonally (matching CSS border rendering).
+  // Non-uniform borders: render each side individually.
+  // Solid borders use trapezoid fills with diagonal corner joins.
+  // Dashed/dotted borders use stroked center-lines with dasharray.
   const { x, y, width, height } = box;
   const bT = borders.top.width;
   const bR = borders.right.width;
@@ -330,32 +318,29 @@ function renderBorders(
   const ix0 = x + bL, iy0 = y + bT;
   const ix1 = x + width - bR, iy1 = y + height - bB;
 
-  if (bT > 0 && borders.top.style !== "none") {
-    const path = createSvgElement(ctx.svgDocument, "path");
-    path.setAttribute("d", `M ${ox0} ${oy0} L ${ox1} ${oy0} L ${ix1} ${iy0} L ${ix0} ${iy0} Z`);
-    path.setAttribute("fill", borders.top.color);
-    group.appendChild(path);
-  }
+  const sides: { w: number; side: ReturnType<typeof parseBorders>[keyof ReturnType<typeof parseBorders>]; trapD: string; lineD: string }[] = [
+    { w: bT, side: borders.top, trapD: `M ${ox0} ${oy0} L ${ox1} ${oy0} L ${ix1} ${iy0} L ${ix0} ${iy0} Z`, lineD: `M ${ix0} ${oy0 + bT / 2} L ${ix1} ${oy0 + bT / 2}` },
+    { w: bR, side: borders.right, trapD: `M ${ox1} ${oy0} L ${ox1} ${oy1} L ${ix1} ${iy1} L ${ix1} ${iy0} Z`, lineD: `M ${ox1 - bR / 2} ${iy0} L ${ox1 - bR / 2} ${iy1}` },
+    { w: bB, side: borders.bottom, trapD: `M ${ox1} ${oy1} L ${ox0} ${oy1} L ${ix0} ${iy1} L ${ix1} ${iy1} Z`, lineD: `M ${ix1} ${oy1 - bB / 2} L ${ix0} ${oy1 - bB / 2}` },
+    { w: bL, side: borders.left, trapD: `M ${ox0} ${oy1} L ${ox0} ${oy0} L ${ix0} ${iy0} L ${ix0} ${iy1} Z`, lineD: `M ${ox0 + bL / 2} ${iy1} L ${ox0 + bL / 2} ${iy0}` },
+  ];
 
-  if (bR > 0 && borders.right.style !== "none") {
-    const path = createSvgElement(ctx.svgDocument, "path");
-    path.setAttribute("d", `M ${ox1} ${oy0} L ${ox1} ${oy1} L ${ix1} ${iy1} L ${ix1} ${iy0} Z`);
-    path.setAttribute("fill", borders.right.color);
-    group.appendChild(path);
-  }
-
-  if (bB > 0 && borders.bottom.style !== "none") {
-    const path = createSvgElement(ctx.svgDocument, "path");
-    path.setAttribute("d", `M ${ox1} ${oy1} L ${ox0} ${oy1} L ${ix0} ${iy1} L ${ix1} ${iy1} Z`);
-    path.setAttribute("fill", borders.bottom.color);
-    group.appendChild(path);
-  }
-
-  if (bL > 0 && borders.left.style !== "none") {
-    const path = createSvgElement(ctx.svgDocument, "path");
-    path.setAttribute("d", `M ${ox0} ${oy1} L ${ox0} ${oy0} L ${ix0} ${iy0} L ${ix0} ${iy1} Z`);
-    path.setAttribute("fill", borders.left.color);
-    group.appendChild(path);
+  for (const { w, side, trapD, lineD } of sides) {
+    if (w <= 0 || side.style === "none") continue;
+    const dash = borderDashArray(side.style, w);
+    if (dash) {
+      // Dashed/dotted: stroked center-line
+      const line = createSvgElement(ctx.svgDocument, "path");
+      setAttributes(line, { d: lineD, fill: "none", stroke: side.color, "stroke-width": w });
+      line.setAttribute("stroke-dasharray", dash);
+      group.appendChild(line);
+    } else {
+      // Solid: trapezoid fill
+      const path = createSvgElement(ctx.svgDocument, "path");
+      path.setAttribute("d", trapD);
+      path.setAttribute("fill", side.color);
+      group.appendChild(path);
+    }
   }
 }
 

@@ -8,7 +8,8 @@ import { SVG_NS, XMLNS_NS, createSvgElement, setAttributes } from "./utils/dom.j
 import { createIdGenerator } from "./utils/id-generator.js";
 import { walkElement } from "./core/traversal.js";
 import { createFontCache } from "./assets/fonts.js";
-import { parseBorderRadii, clampRadii, hasRadius, hasOverflowClip } from "./core/styles.js";
+import { parseBorderRadii, clampRadii, hasRadius, isUniformRadius, hasOverflowClip } from "./core/styles.js";
+import { buildRoundedRectPath } from "./utils/geometry.js";
 
 export type {
   DomToSvgOptions,
@@ -112,37 +113,13 @@ function createRootClipShape(
   height: number,
   radii: BorderRadii,
 ): SVGElement {
-  const [tlx, tly] = radii.topLeft;
-  const [trx, try_] = radii.topRight;
-  const [brx, bry] = radii.bottomRight;
-  const [blx, bly] = radii.bottomLeft;
-
-  const isUniform =
-    tlx === trx && trx === brx && brx === blx &&
-    tly === try_ && try_ === bry && bry === bly;
-
-  if (isUniform) {
+  if (isUniformRadius(radii)) {
     const rect = createSvgElement(doc, "rect");
-    setAttributes(rect, { x: 0, y: 0, width, height, rx: tlx, ry: tly });
+    setAttributes(rect, { x: 0, y: 0, width, height, rx: radii.topLeft[0], ry: radii.topLeft[1] });
     return rect;
   }
-
-  // Non-uniform: build a path with arcs at each corner
-  const d = [
-    `M ${tlx} 0`,
-    `L ${width - trx} 0`,
-    trx || try_ ? `A ${trx} ${try_} 0 0 1 ${width} ${try_}` : "",
-    `L ${width} ${height - bry}`,
-    brx || bry ? `A ${brx} ${bry} 0 0 1 ${width - brx} ${height}` : "",
-    `L ${blx} ${height}`,
-    blx || bly ? `A ${blx} ${bly} 0 0 1 0 ${height - bly}` : "",
-    `L 0 ${tly}`,
-    tlx || tly ? `A ${tlx} ${tly} 0 0 1 ${tlx} 0` : "",
-    "Z",
-  ].filter(Boolean).join(" ");
-
   const path = createSvgElement(doc, "path");
-  path.setAttribute("d", d);
+  path.setAttribute("d", buildRoundedRectPath(0, 0, width, height, radii));
   return path;
 }
 
@@ -165,7 +142,7 @@ function createResult(svg: SVGSVGElement): DomToSvgResult {
       a.href = url;
       a.download = filename;
       a.click();
-      URL.revokeObjectURL(url);
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
     },
   };
 }

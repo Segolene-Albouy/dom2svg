@@ -19,6 +19,7 @@ export async function renderTextNode(
   if (!parent) return null;
 
   const styles = window.getComputedStyle(parent);
+  if (styles.visibility === "hidden") return null;
   const rootRect = rootElement.getBoundingClientRect();
 
   // Use Range to get per-line client rects
@@ -29,7 +30,6 @@ export async function renderTextNode(
   if (rects.length === 0) return null;
 
   const group = createSvgElement(ctx.svgDocument, "g");
-  const lines = getTextLines(textNode, rootRect);
 
   // Determine if we should use path mode
   const usePathMode = ctx.options.textToPath && ctx.fontCache;
@@ -43,6 +43,13 @@ export async function renderTextNode(
     font = await ctx.fontCache.getFont(fontFamily, fontWeight, fontStyle);
   }
 
+  // Use font's actual ascender metric when available, otherwise 0.8 approximation
+  let ascenderRatio = 0.8;
+  if (font && font.ascender && font.unitsPerEm) {
+    ascenderRatio = font.ascender / font.unitsPerEm;
+  }
+
+  const lines = getTextLines(textNode, rootRect, ascenderRatio);
   const textTransform = styles.textTransform;
 
   for (const line of lines) {
@@ -86,23 +93,24 @@ interface TextLine {
  * Range API returns the full line box (height includes line-height spacing).
  * SVG <text> y positions at the alphabetic baseline.
  * We center the font within the line box, then offset to the baseline:
- *   y = top + (lineBoxHeight - fontSize) / 2 + fontSize * 0.8
+ *   y = top + (lineBoxHeight - fontSize) / 2 + fontSize * ascenderRatio
  *
- * The 0.8 factor approximates the ascender ratio for common Latin fonts
- * (actual values: Arial 0.905, Helvetica 0.77, system-ui ~0.82).
+ * When an opentype font is available, we use its actual ascender metric.
+ * Otherwise we fall back to 0.8 which approximates common Latin fonts.
  */
 function baselineY(
   rectTop: number,
   rectHeight: number,
   fontSize: number,
   rootTop: number,
+  ascenderRatio: number = 0.8,
 ): number {
   const topPadding = (rectHeight - fontSize) / 2;
-  return rectTop - rootTop + topPadding + fontSize * 0.8;
+  return rectTop - rootTop + topPadding + fontSize * ascenderRatio;
 }
 
 /** Get per-line text and positions using Range API */
-function getTextLines(textNode: Text, rootRect: DOMRect): TextLine[] {
+function getTextLines(textNode: Text, rootRect: DOMRect, ascenderRatio: number = 0.8): TextLine[] {
   const lines: TextLine[] = [];
   const text = textNode.textContent || "";
   if (!text) return lines;
@@ -124,48 +132,68 @@ function getTextLines(textNode: Text, rootRect: DOMRect): TextLine[] {
     lines.push({
       text,
       x: rect.left - rootRect.left,
-      y: baselineY(rect.top, rect.height, fontSize, rootRect.top),
+      y: baselineY(rect.top, rect.height, fontSize, rootRect.top, ascenderRatio),
     });
     return lines;
   }
 
-  // Multi-line: iterate character by character to determine line breaks
-  let currentLine = "";
-  let currentRect: DOMRect | null = null;
+  // Multi-line: use whole-node rects as line guides, binary search for breakpoints.
+  // This is O(lines * log(n)) instead of O(n) layout queries.
+  const lineRects: DOMRect[] = Array.from(rects);
+  let charStart = 0;
 
-  for (let i = 0; i < text.length; i++) {
-    range.setStart(textNode, i);
-    range.setEnd(textNode, i + 1);
-    const charRects = range.getClientRects();
-    if (charRects.length === 0) continue;
+  for (let lineIdx = 0; lineIdx < lineRects.length; lineIdx++) {
+    const lineRect = lineRects[lineIdx]!;
+    const isLastLine = lineIdx === lineRects.length - 1;
 
-    const charRect = charRects[0]!;
-
-    if (currentRect === null) {
-      currentRect = charRect;
-      currentLine = text[i]!;
-    } else if (Math.abs(charRect.top - currentRect.top) > fontSize * 0.5) {
-      lines.push({
-        text: currentLine,
-        x: currentRect.left - rootRect.left,
-        y: baselineY(currentRect.top, currentRect.height, fontSize, rootRect.top),
-      });
-      currentLine = text[i]!;
-      currentRect = charRect;
+    let charEnd: number;
+    if (isLastLine) {
+      charEnd = text.length;
     } else {
-      currentLine += text[i];
+      // Binary search for the first character on the next line
+      const nextTop = lineRects[lineIdx + 1]!.top;
+      charEnd = binarySearchLineBreak(textNode, range, charStart, text.length, nextTop, fontSize);
     }
-  }
 
-  if (currentLine && currentRect) {
-    lines.push({
-      text: currentLine,
-      x: currentRect.left - rootRect.left,
-      y: baselineY(currentRect.top, currentRect.height, fontSize, rootRect.top),
-    });
+    const lineText = text.slice(charStart, charEnd);
+    if (lineText) {
+      lines.push({
+        text: lineText,
+        x: lineRect.left - rootRect.left,
+        y: baselineY(lineRect.top, lineRect.height, fontSize, rootRect.top, ascenderRatio),
+      });
+    }
+    charStart = charEnd;
   }
 
   return lines;
+}
+
+/** Binary search for the first character that falls on the next visual line */
+function binarySearchLineBreak(
+  textNode: Text,
+  range: Range,
+  start: number,
+  end: number,
+  nextLineTop: number,
+  fontSize: number,
+): number {
+  while (start < end) {
+    const mid = Math.floor((start + end) / 2);
+    range.setStart(textNode, mid);
+    range.setEnd(textNode, mid + 1);
+    const rects = range.getClientRects();
+    if (rects.length === 0) {
+      start = mid + 1;
+      continue;
+    }
+    if (Math.abs(rects[0]!.top - nextLineTop) < fontSize * 0.5) {
+      end = mid; // This char is on the next line, search earlier
+    } else {
+      start = mid + 1; // Still on current line
+    }
+  }
+  return start;
 }
 
 /** Apply CSS text-transform to a string */
@@ -196,10 +224,11 @@ function applyTextStyles(
   }
 
   if (styles.textDecoration && styles.textDecoration !== "none") {
-    if (styles.textDecoration.includes("underline")) {
-      textEl.setAttribute("text-decoration", "underline");
-    } else if (styles.textDecoration.includes("line-through")) {
-      textEl.setAttribute("text-decoration", "line-through");
+    const decs: string[] = [];
+    if (styles.textDecoration.includes("underline")) decs.push("underline");
+    if (styles.textDecoration.includes("line-through")) decs.push("line-through");
+    if (decs.length > 0) {
+      textEl.setAttribute("text-decoration", decs.join(" "));
     }
   }
 

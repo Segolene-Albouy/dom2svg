@@ -40,33 +40,6 @@ export interface RenderContext {
   opacity: number;
 }
 
-/** A stacking context node for CSS 2.1 painting order */
-export interface StackingContext {
-  element: Element;
-  children: StackingContextChild[];
-  zIndex: number;
-  opacity: number;
-}
-
-/** Union type for items within a stacking context */
-export type StackingContextChild =
-  | { type: "stacking-context"; context: StackingContext }
-  | { type: "block"; element: Element }
-  | { type: "float"; element: Element }
-  | { type: "inline"; element: Element }
-  | { type: "positioned"; element: Element; zIndex: number };
-
-/** Stacking layer indices (CSS 2.1 Appendix E) */
-export enum StackingLayer {
-  BackgroundBorder = 0,
-  NegativeZIndex = 1,
-  BlockFlowNonPositioned = 2,
-  FloatNonPositioned = 3,
-  InlineFlowNonPositioned = 4,
-  PositionedZeroAuto = 5,
-  PositiveZIndex = 6,
-}
-
 /** Parsed CSS border side */
 export interface BorderSide {
   width: number;

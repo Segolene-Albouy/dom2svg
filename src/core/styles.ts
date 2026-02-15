@@ -1,12 +1,13 @@
 import type { BorderSide, Borders, BorderRadii } from "../types.js";
 
-/** Check if an element is invisible and should be skipped */
+/** Check if an element's entire subtree should be skipped (display:none, opacity:0) */
 export function isInvisible(styles: CSSStyleDeclaration): boolean {
-  return (
-    styles.display === "none" ||
-    styles.visibility === "hidden" ||
-    styles.opacity === "0"
-  );
+  return styles.display === "none" || styles.opacity === "0";
+}
+
+/** Check if element's own visuals are hidden (children may still be visible) */
+export function isVisibilityHidden(styles: CSSStyleDeclaration): boolean {
+  return styles.visibility === "hidden";
 }
 
 /** Parse a single border side from computed styles */
@@ -100,15 +101,13 @@ export function isUniformRadius(radii: BorderRadii): boolean {
   );
 }
 
-/** Check if element has overflow clipping */
+/** Check if element has overflow clipping (hidden, clip, scroll, auto all clip) */
 export function hasOverflowClip(styles: CSSStyleDeclaration): boolean {
+  const clipped = new Set(["hidden", "clip", "scroll", "auto"]);
   return (
-    styles.overflow === "hidden" ||
-    styles.overflow === "clip" ||
-    styles.overflowX === "hidden" ||
-    styles.overflowX === "clip" ||
-    styles.overflowY === "hidden" ||
-    styles.overflowY === "clip"
+    clipped.has(styles.overflow) ||
+    clipped.has(styles.overflowX) ||
+    clipped.has(styles.overflowY)
   );
 }
 

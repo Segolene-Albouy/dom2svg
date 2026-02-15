@@ -17,11 +17,6 @@ export function isSvgElement(element: Element): element is SVGElement {
   return element.namespaceURI === SVG_NS;
 }
 
-/** Check if an element is an HTML element */
-export function isHtmlElement(element: Element): element is HTMLElement {
-  return element instanceof HTMLElement;
-}
-
 /** Check if an element is an HTMLImageElement */
 export function isImageElement(element: Element): element is HTMLImageElement {
   return element instanceof HTMLImageElement;
@@ -50,11 +45,6 @@ export function setAttributes(
   for (const [key, value] of Object.entries(attrs)) {
     element.setAttribute(key, String(value));
   }
-}
-
-/** Get the computed style for an element */
-export function getComputedStyles(element: Element): CSSStyleDeclaration {
-  return window.getComputedStyle(element);
 }
 
 /** Get computed style for pseudo-elements */

@@ -60,4 +60,25 @@ describe("parseLinearGradient", () => {
     );
     expect(result!.angle).toBe(135);
   });
+
+  it("parses gradient with modern CSS color syntax (spaces in functions)", () => {
+    const result = parseLinearGradient(
+      "linear-gradient(hsl(120deg 50% 50%) 25%, hsl(240deg 50% 50%) 75%)",
+    );
+    expect(result).not.toBeNull();
+    expect(result!.stops).toHaveLength(2);
+    expect(result!.stops[0]!.color).toBe("hsl(120deg 50% 50%)");
+    expect(result!.stops[0]!.position).toBe(0.25);
+    expect(result!.stops[1]!.color).toBe("hsl(240deg 50% 50%)");
+    expect(result!.stops[1]!.position).toBe(0.75);
+  });
+
+  it("parses gradient with rgba and position", () => {
+    const result = parseLinearGradient(
+      "linear-gradient(rgba(255, 0, 0, 0.5) 50%, blue)",
+    );
+    expect(result).not.toBeNull();
+    expect(result!.stops[0]!.color).toBe("rgba(255, 0, 0, 0.5)");
+    expect(result!.stops[0]!.position).toBe(0.5);
+  });
 });

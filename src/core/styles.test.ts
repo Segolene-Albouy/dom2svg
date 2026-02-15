@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   isInvisible,
+  isVisibilityHidden,
   parseBorders,
   parseBorderRadii,
   hasBorder,
@@ -61,8 +62,8 @@ describe("isInvisible", () => {
     expect(isInvisible(mockStyles({ display: "none" }))).toBe(true);
   });
 
-  it("returns true for visibility: hidden", () => {
-    expect(isInvisible(mockStyles({ visibility: "hidden" }))).toBe(true);
+  it("returns false for visibility: hidden (children may be visible)", () => {
+    expect(isInvisible(mockStyles({ visibility: "hidden" }))).toBe(false);
   });
 
   it("returns true for opacity: 0", () => {
@@ -75,6 +76,16 @@ describe("isInvisible", () => {
 
   it("returns false for low but non-zero opacity", () => {
     expect(isInvisible(mockStyles({ opacity: "0.01" }))).toBe(false);
+  });
+});
+
+describe("isVisibilityHidden", () => {
+  it("returns true for visibility: hidden", () => {
+    expect(isVisibilityHidden(mockStyles({ visibility: "hidden" }))).toBe(true);
+  });
+
+  it("returns false for visible", () => {
+    expect(isVisibilityHidden(mockStyles())).toBe(false);
   });
 });
 
@@ -227,6 +238,14 @@ describe("hasOverflowClip", () => {
 
   it("returns true for overflowY: clip", () => {
     expect(hasOverflowClip(mockStyles({ overflowY: "clip" }))).toBe(true);
+  });
+
+  it("returns true for overflow: scroll", () => {
+    expect(hasOverflowClip(mockStyles({ overflow: "scroll" }))).toBe(true);
+  });
+
+  it("returns true for overflow: auto", () => {
+    expect(hasOverflowClip(mockStyles({ overflow: "auto" }))).toBe(true);
   });
 });
 

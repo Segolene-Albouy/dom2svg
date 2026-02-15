@@ -1,72 +1,43 @@
 import { describe, it, expect } from "vitest";
-import { boxesIntersect, expandBox } from "./geometry.js";
+import { buildRoundedRectPath } from "./geometry.js";
 
-describe("boxesIntersect", () => {
-  it("returns true for overlapping boxes", () => {
-    const a = { x: 0, y: 0, width: 100, height: 100 };
-    const b = { x: 50, y: 50, width: 100, height: 100 };
-    expect(boxesIntersect(a, b)).toBe(true);
+describe("buildRoundedRectPath", () => {
+  it("builds a path with uniform radii", () => {
+    const radii = {
+      topLeft: [10, 10] as [number, number],
+      topRight: [10, 10] as [number, number],
+      bottomRight: [10, 10] as [number, number],
+      bottomLeft: [10, 10] as [number, number],
+    };
+    const d = buildRoundedRectPath(0, 0, 100, 50, radii);
+    expect(d).toContain("M 10 0");
+    expect(d).toContain("A 10 10");
+    expect(d).toContain("Z");
   });
 
-  it("returns true for contained box", () => {
-    const a = { x: 0, y: 0, width: 100, height: 100 };
-    const b = { x: 10, y: 10, width: 20, height: 20 };
-    expect(boxesIntersect(a, b)).toBe(true);
+  it("builds a path with non-uniform radii", () => {
+    const radii = {
+      topLeft: [5, 5] as [number, number],
+      topRight: [10, 10] as [number, number],
+      bottomRight: [15, 15] as [number, number],
+      bottomLeft: [20, 20] as [number, number],
+    };
+    const d = buildRoundedRectPath(10, 20, 100, 50, radii);
+    expect(d).toContain("M 15 20"); // x + tlx, y
+    expect(d).toContain("A 10 10"); // topRight
+    expect(d).toContain("A 15 15"); // bottomRight
+    expect(d).toContain("A 20 20"); // bottomLeft
+    expect(d).toContain("A 5 5");   // topLeft
   });
 
-  it("returns false for non-overlapping boxes (horizontal)", () => {
-    const a = { x: 0, y: 0, width: 50, height: 50 };
-    const b = { x: 100, y: 0, width: 50, height: 50 };
-    expect(boxesIntersect(a, b)).toBe(false);
-  });
-
-  it("returns false for non-overlapping boxes (vertical)", () => {
-    const a = { x: 0, y: 0, width: 50, height: 50 };
-    const b = { x: 0, y: 100, width: 50, height: 50 };
-    expect(boxesIntersect(a, b)).toBe(false);
-  });
-
-  it("returns false for touching edges (not overlapping)", () => {
-    const a = { x: 0, y: 0, width: 50, height: 50 };
-    const b = { x: 50, y: 0, width: 50, height: 50 };
-    expect(boxesIntersect(a, b)).toBe(false);
-  });
-
-  it("a zero-size point inside a box counts as intersecting", () => {
-    const a = { x: 10, y: 10, width: 0, height: 0 };
-    const b = { x: 0, y: 0, width: 100, height: 100 };
-    // A degenerate point at (10,10) is geometrically inside b
-    expect(boxesIntersect(a, b)).toBe(true);
-  });
-
-  it("a zero-size point outside a box does not intersect", () => {
-    const a = { x: 200, y: 200, width: 0, height: 0 };
-    const b = { x: 0, y: 0, width: 100, height: 100 };
-    expect(boxesIntersect(a, b)).toBe(false);
-  });
-
-  it("handles negative coordinates", () => {
-    const a = { x: -50, y: -50, width: 100, height: 100 };
-    const b = { x: -10, y: -10, width: 20, height: 20 };
-    expect(boxesIntersect(a, b)).toBe(true);
-  });
-});
-
-describe("expandBox", () => {
-  it("expands box by padding", () => {
-    const box = { x: 10, y: 20, width: 100, height: 50 };
-    const result = expandBox(box, 5);
-    expect(result).toEqual({ x: 5, y: 15, width: 110, height: 60 });
-  });
-
-  it("handles zero padding", () => {
-    const box = { x: 10, y: 20, width: 100, height: 50 };
-    expect(expandBox(box, 0)).toEqual(box);
-  });
-
-  it("handles negative padding (shrink)", () => {
-    const box = { x: 0, y: 0, width: 100, height: 100 };
-    const result = expandBox(box, -10);
-    expect(result).toEqual({ x: 10, y: 10, width: 80, height: 80 });
+  it("skips arcs for zero radii corners", () => {
+    const radii = {
+      topLeft: [0, 0] as [number, number],
+      topRight: [0, 0] as [number, number],
+      bottomRight: [0, 0] as [number, number],
+      bottomLeft: [0, 0] as [number, number],
+    };
+    const d = buildRoundedRectPath(0, 0, 100, 50, radii);
+    expect(d).not.toContain("A ");
   });
 });

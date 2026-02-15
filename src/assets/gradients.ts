@@ -1,4 +1,4 @@
-import type { LinearGradient, GradientStop, RenderContext } from "../types.js";
+import type { LinearGradient, GradientStop, RenderContext, BoxGeometry } from "../types.js";
 import { createSvgElement, setAttributes } from "../utils/dom.js";
 
 /** Parse a CSS linear-gradient() into our LinearGradient structure */
@@ -28,20 +28,7 @@ export function parseLinearGradient(value: string): LinearGradient | null {
   const rawStops = parts.slice(stopsStart);
 
   for (let i = 0; i < rawStops.length; i++) {
-    const stopStr = rawStops[i]!.trim();
-    const lastSpace = stopStr.lastIndexOf(" ");
-
-    let color: string;
-    let position: number;
-
-    if (lastSpace > 0 && stopStr.slice(lastSpace).match(/[\d.]+%/)) {
-      color = stopStr.slice(0, lastSpace).trim();
-      position = parseFloat(stopStr.slice(lastSpace)) / 100;
-    } else {
-      color = stopStr;
-      position = rawStops.length > 1 ? i / (rawStops.length - 1) : 0;
-    }
-
+    const { color, position } = parseColorStop(rawStops[i]!.trim(), i, rawStops.length);
     stops.push({ color, position });
   }
 
@@ -51,6 +38,7 @@ export function parseLinearGradient(value: string): LinearGradient | null {
 /** Convert a linear-gradient to an SVG <linearGradient> element */
 export function createSvgLinearGradient(
   gradient: LinearGradient,
+  box: BoxGeometry,
   ctx: RenderContext,
 ): SVGLinearGradientElement {
   const id = ctx.idGenerator.next("grad");
@@ -59,19 +47,29 @@ export function createSvgLinearGradient(
     "linearGradient",
   ) as SVGLinearGradientElement;
 
-  // Convert angle to x1,y1,x2,y2
-  const rad = ((gradient.angle - 90) * Math.PI) / 180;
-  const x1 = 0.5 - Math.cos(rad) * 0.5;
-  const y1 = 0.5 - Math.sin(rad) * 0.5;
-  const x2 = 0.5 + Math.cos(rad) * 0.5;
-  const y2 = 0.5 + Math.sin(rad) * 0.5;
+  // Use userSpaceOnUse with pixel coordinates for correct diagonal angles
+  // on non-square elements (objectBoundingBox distorts the angle).
+  const cx = box.x + box.width / 2;
+  const cy = box.y + box.height / 2;
+  const angleRad = (gradient.angle * Math.PI) / 180;
+  // CSS angle: 0deg = to top (↑), 90deg = to right (→)
+  const dx = Math.sin(angleRad);
+  const dy = -Math.cos(angleRad);
+  // Gradient line half-length per CSS spec: extends to the perpendicular
+  // from the farthest corner.
+  const halfLen = Math.abs(box.width / 2 * dx) + Math.abs(box.height / 2 * dy);
+  const x1 = cx - dx * halfLen;
+  const y1 = cy - dy * halfLen;
+  const x2 = cx + dx * halfLen;
+  const y2 = cy + dy * halfLen;
 
   setAttributes(el, {
     id,
-    x1: x1.toFixed(4),
-    y1: y1.toFixed(4),
-    x2: x2.toFixed(4),
-    y2: y2.toFixed(4),
+    gradientUnits: "userSpaceOnUse",
+    x1: x1.toFixed(2),
+    y1: y1.toFixed(2),
+    x2: x2.toFixed(2),
+    y2: y2.toFixed(2),
   });
 
   for (const stop of gradient.stops) {
@@ -223,24 +221,43 @@ function rasterizeRadialGradient(
   }
 
   ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, width * 2, height * 2);
+  ctx.fillRect(0, 0, width, height);
   ctx.restore();
 
   return canvas.toDataURL("image/png");
 }
 
-/** Parse a color stop like "red 50%" into color and position */
+/**
+ * Parse a color stop like "red 50%" into color and position.
+ * Handles modern CSS color syntax with spaces (e.g. "hsl(120deg 50% 50%) 75%")
+ * by only looking for a position % after the last closing parenthesis.
+ */
 function parseColorStop(
   stop: string,
   index: number,
   total: number,
 ): { color: string; position: number } {
-  const lastSpace = stop.lastIndexOf(" ");
-  if (lastSpace > 0 && stop.slice(lastSpace).match(/[\d.]+%/)) {
+  // Look for a trailing percentage after any function parens
+  const lastParen = stop.lastIndexOf(")");
+  const tail = lastParen >= 0 ? stop.slice(lastParen + 1) : stop;
+  const posMatch = tail.match(/\s+([\d.]+%)\s*$/);
+  if (posMatch) {
+    const posStr = posMatch[1]!;
+    const colorEnd = stop.length - posMatch[0].length;
     return {
-      color: stop.slice(0, lastSpace).trim(),
-      position: parseFloat(stop.slice(lastSpace)) / 100,
+      color: stop.slice(0, colorEnd).trim(),
+      position: parseFloat(posStr) / 100,
     };
+  }
+  // No parens: try simple "color position" format (e.g. "red 50%")
+  if (lastParen < 0) {
+    const spaceIdx = stop.lastIndexOf(" ");
+    if (spaceIdx > 0 && stop.slice(spaceIdx).match(/[\d.]+%/)) {
+      return {
+        color: stop.slice(0, spaceIdx).trim(),
+        position: parseFloat(stop.slice(spaceIdx)) / 100,
+      };
+    }
   }
   return {
     color: stop,
