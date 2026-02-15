@@ -257,24 +257,29 @@ function renderBorders(
     borders.top.style !== "none"
   ) {
     const halfW = borders.top.width / 2;
-    const rect = createSvgElement(ctx.svgDocument, "rect");
-    setAttributes(rect, {
+    const insetBox: BoxGeometry = {
       x: box.x + halfW,
       y: box.y + halfW,
       width: Math.max(0, box.width - borders.top.width),
       height: Math.max(0, box.height - borders.top.width),
+    };
+
+    // Inset the radii by the border width
+    const insetRadii: BorderRadii = {
+      topLeft: [Math.max(0, radii.topLeft[0] - halfW), Math.max(0, radii.topLeft[1] - halfW)],
+      topRight: [Math.max(0, radii.topRight[0] - halfW), Math.max(0, radii.topRight[1] - halfW)],
+      bottomRight: [Math.max(0, radii.bottomRight[0] - halfW), Math.max(0, radii.bottomRight[1] - halfW)],
+      bottomLeft: [Math.max(0, radii.bottomLeft[0] - halfW), Math.max(0, radii.bottomLeft[1] - halfW)],
+    };
+
+    const shape = createBoxShape(insetBox, insetRadii, ctx);
+    setAttributes(shape, {
       fill: "none",
       stroke: borders.top.color,
       "stroke-width": borders.top.width,
     });
 
-    if (hasRadius(radii) && isUniformRadius(radii)) {
-      const rx = Math.max(0, radii.topLeft[0] - halfW);
-      const ry = Math.max(0, radii.topLeft[1] - halfW);
-      setAttributes(rect, { rx, ry });
-    }
-
-    group.appendChild(rect);
+    group.appendChild(shape);
     return;
   }
 

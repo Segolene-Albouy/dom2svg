@@ -77,6 +77,27 @@ interface TextLine {
   y: number;
 }
 
+/**
+ * Compute the SVG baseline y from a Range rect.
+ *
+ * Range API returns the full line box (height includes line-height spacing).
+ * SVG <text> y positions at the alphabetic baseline.
+ * We center the font within the line box, then offset to the baseline:
+ *   y = top + (lineBoxHeight - fontSize) / 2 + fontSize * 0.8
+ *
+ * The 0.8 factor approximates the ascender ratio for common Latin fonts
+ * (actual values: Arial 0.905, Helvetica 0.77, system-ui ~0.82).
+ */
+function baselineY(
+  rectTop: number,
+  rectHeight: number,
+  fontSize: number,
+  rootTop: number,
+): number {
+  const topPadding = (rectHeight - fontSize) / 2;
+  return rectTop - rootTop + topPadding + fontSize * 0.8;
+}
+
 /** Get per-line text and positions using Range API */
 function getTextLines(textNode: Text, rootRect: DOMRect): TextLine[] {
   const lines: TextLine[] = [];
@@ -100,7 +121,7 @@ function getTextLines(textNode: Text, rootRect: DOMRect): TextLine[] {
     lines.push({
       text,
       x: rect.left - rootRect.left,
-      y: rect.top - rootRect.top + fontSize * 0.85,
+      y: baselineY(rect.top, rect.height, fontSize, rootRect.top),
     });
     return lines;
   }
@@ -124,7 +145,7 @@ function getTextLines(textNode: Text, rootRect: DOMRect): TextLine[] {
       lines.push({
         text: currentLine,
         x: currentRect.left - rootRect.left,
-        y: currentRect.top - rootRect.top + fontSize * 0.85,
+        y: baselineY(currentRect.top, currentRect.height, fontSize, rootRect.top),
       });
       currentLine = text[i]!;
       currentRect = charRect;
@@ -137,7 +158,7 @@ function getTextLines(textNode: Text, rootRect: DOMRect): TextLine[] {
     lines.push({
       text: currentLine,
       x: currentRect.left - rootRect.left,
-      y: currentRect.top - rootRect.top + fontSize * 0.85,
+      y: baselineY(currentRect.top, currentRect.height, fontSize, rootRect.top),
     });
   }
 
@@ -169,10 +190,9 @@ function applyTextStyles(
     }
   }
 
-  const align = styles.textAlign;
-  if (align === "center") {
-    textEl.setAttribute("text-anchor", "middle");
-  } else if (align === "right" || align === "end") {
-    textEl.setAttribute("text-anchor", "end");
-  }
+  // NOTE: We intentionally do NOT set text-anchor based on text-align.
+  // Range API getClientRects() returns the actual rendered left edge of
+  // each line, which already accounts for centering/right-alignment.
+  // Setting text-anchor: middle would re-center around that left edge,
+  // shifting text incorrectly.
 }
