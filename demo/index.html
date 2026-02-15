@@ -374,6 +374,299 @@
       font-weight: 700;
       color: #1a1a1a;
     }
+
+    /* ---- Row 5 ---- */
+    .feat-radial {
+      width: 80px;
+      height: 60px;
+      margin: 0 auto;
+      border-radius: 8px;
+      background: radial-gradient(circle, #8b5cf6, #1e1b4b);
+    }
+    .feat-dashed {
+      width: 80px;
+      height: 60px;
+      margin: 0 auto;
+      border: 2px dashed #ef4444;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      color: #ef4444;
+    }
+    .feat-deep {
+      width: 80px;
+      height: 60px;
+      margin: 0 auto;
+      background: #1e293b;
+      border-radius: 10px;
+      padding: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .feat-deep-inner1 {
+      width: 60px;
+      height: 44px;
+      background: #334155;
+      border-radius: 8px;
+      padding: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .feat-deep-inner2 {
+      width: 40px;
+      height: 30px;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      border-radius: 6px;
+    }
+    .feat-letter {
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 4px;
+      color: #ec4899;
+      text-transform: uppercase;
+    }
+    .feat-badge-wrap {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .feat-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      font-size: 10px;
+      font-weight: 700;
+      color: white;
+    }
+    .feat-combo {
+      width: 80px;
+      height: 60px;
+      margin: 0 auto;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      border: 1px solid rgba(99, 102, 241, 0.4);
+      transform: rotate(-3deg);
+      filter: drop-shadow(2px 3px 6px rgba(99, 102, 241, 0.3));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .feat-combo-inner {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #6366f1, #312e81);
+      border: 2px solid rgba(165, 180, 252, 0.3);
+    }
+    .feat-clip-text {
+      font-size: 24px;
+      font-weight: 900;
+      color: #3b82f6;
+    }
+    .feat-clip-text small {
+      display: block;
+      font-size: 10px;
+      font-weight: 500;
+      color: #64748b;
+    }
+
+    /* ================= COMPLEX NODE EDITOR ================= */
+    .pipeline-editor {
+      width: 720px;
+      height: 460px;
+      background: #13111c;
+      border-radius: 12px;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid #2a2640;
+    }
+
+    /* Toolbar */
+    .pe-toolbar {
+      height: 36px;
+      background: #1c1a2e;
+      border-bottom: 1px solid #2a2640;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      gap: 8px;
+    }
+    .pe-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .pe-dot-red { background: #ef4444; }
+    .pe-dot-yellow { background: #f59e0b; }
+    .pe-dot-green { background: #10b981; }
+    .pe-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: #64748b;
+      margin-left: 8px;
+      flex: 1;
+    }
+    .pe-status {
+      font-size: 9px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(16, 185, 129, 0.15);
+      color: #10b981;
+    }
+
+    .pe-canvas {
+      position: absolute;
+      top: 36px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+    }
+    .pe-grid {
+      position: absolute;
+      inset: 0;
+    }
+    .pe-connections {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    /* Pipeline nodes */
+    .pe-node {
+      position: absolute;
+      background: #1e1b33;
+      border: 1px solid #302c50;
+      border-radius: 10px;
+      min-width: 130px;
+      font-size: 11px;
+      filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5));
+    }
+    .pe-node-header {
+      padding: 7px 10px;
+      font-weight: 600;
+      font-size: 10px;
+      border-bottom: 1px solid #302c50;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      border-radius: 10px 10px 0 0;
+    }
+    .pe-node-icon {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      font-weight: 700;
+      color: white;
+    }
+    .pe-node-body { padding: 8px 10px; }
+    .pe-field {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+      font-size: 10px;
+      color: #8b85a8;
+    }
+    .pe-field:last-child { margin-bottom: 0; }
+    .pe-port {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      border: 2px solid;
+      flex-shrink: 0;
+    }
+    .pe-field-val {
+      font-size: 9px;
+      color: #6b6487;
+      background: #15132a;
+      padding: 1px 6px;
+      border-radius: 3px;
+    }
+
+    /* Node themes */
+    .pe-http { top: 20px; left: 20px; }
+    .pe-http .pe-node-header { color: #60a5fa; }
+    .pe-http .pe-node-icon { background: #3b82f6; }
+    .pe-http .pe-port { border-color: #3b82f6; }
+
+    .pe-parse { top: 20px; left: 220px; }
+    .pe-parse .pe-node-header { color: #34d399; }
+    .pe-parse .pe-node-icon { background: #10b981; }
+    .pe-parse .pe-port { border-color: #10b981; }
+
+    .pe-filter { top: 160px; left: 20px; }
+    .pe-filter .pe-node-header { color: #fbbf24; }
+    .pe-filter .pe-node-icon { background: #f59e0b; }
+    .pe-filter .pe-port { border-color: #f59e0b; }
+
+    .pe-transform { top: 160px; left: 240px; }
+    .pe-transform .pe-node-header { color: #a78bfa; }
+    .pe-transform .pe-node-icon { background: #8b5cf6; }
+    .pe-transform .pe-port { border-color: #8b5cf6; }
+
+    .pe-aggregate { top: 160px; left: 460px; }
+    .pe-aggregate .pe-node-header { color: #f472b6; }
+    .pe-aggregate .pe-node-icon { background: #ec4899; }
+    .pe-aggregate .pe-port { border-color: #ec4899; }
+
+    .pe-database { top: 320px; left: 460px; }
+    .pe-database .pe-node-header {
+      color: #2dd4bf;
+      background: linear-gradient(135deg, rgba(45, 212, 191, 0.08), transparent);
+    }
+    .pe-database .pe-node-icon { background: #14b8a6; }
+    .pe-database .pe-port { border-color: #14b8a6; }
+
+    /* Comment */
+    .pe-comment {
+      position: absolute;
+      top: 330px;
+      left: 30px;
+      background: rgba(251, 191, 36, 0.08);
+      border: 1px dashed rgba(251, 191, 36, 0.3);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 10px;
+      color: #fbbf24;
+      max-width: 160px;
+      line-height: 1.4;
+    }
+    .pe-comment-title {
+      font-weight: 700;
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+      opacity: 0.7;
+    }
+
+    /* Minimap */
+    .pe-minimap {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      width: 100px;
+      height: 65px;
+      background: rgba(19, 17, 28, 0.9);
+      border: 1px solid #302c50;
+      border-radius: 6px;
+      overflow: hidden;
+      padding: 4px;
+    }
+    .pe-minimap-dot {
+      position: absolute;
+      border-radius: 2px;
+    }
   </style>
 </head>
 <body>
@@ -382,8 +675,9 @@
 
   <div class="controls">
     <button id="btn-export-editor">Export Node Editor</button>
+    <button id="btn-export-pipeline">Export Pipeline</button>
     <button id="btn-export-grid">Export Feature Grid</button>
-    <button id="btn-export-all" class="secondary">Export Both</button>
+    <button id="btn-export-all" class="secondary">Export All</button>
     <button id="btn-download" class="secondary" disabled>Download SVG</button>
     <label>
       <input type="checkbox" id="chk-background" checked />
@@ -471,6 +765,208 @@
       <div class="panel-header">SVG Output</div>
       <div class="panel-body" id="editor-output">
         <span style="color:#444; font-size:13px;">Click "Export Node Editor" to render</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== COMPLEX NODE EDITOR ===== -->
+  <h3>Complex Pipeline Editor</h3>
+  <div class="split">
+    <div class="panel">
+      <div class="panel-header">DOM Source</div>
+      <div class="panel-body">
+        <div class="pipeline-editor" id="pipeline-editor">
+          <!-- Toolbar -->
+          <div class="pe-toolbar">
+            <div class="pe-dot pe-dot-red"></div>
+            <div class="pe-dot pe-dot-yellow"></div>
+            <div class="pe-dot pe-dot-green"></div>
+            <span class="pe-title">Pipeline Editor — data-pipeline-v2.json</span>
+            <span class="pe-status">Running</span>
+          </div>
+
+          <div class="pe-canvas">
+            <!-- Grid background -->
+            <svg class="pe-grid" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <pattern id="pe-dots" width="16" height="16" patternUnits="userSpaceOnUse">
+                  <circle cx="8" cy="8" r="0.7" fill="#252240" />
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#pe-dots)" />
+            </svg>
+
+            <!-- Connections -->
+            <svg class="pe-connections" xmlns="http://www.w3.org/2000/svg">
+              <!-- HTTP → Parse -->
+              <path d="M 150 65 C 185 65, 185 65, 220 65" stroke="#3b82f6" stroke-width="1.5" fill="none" opacity="0.5" />
+              <!-- Parse → Filter -->
+              <path d="M 150 85 C 180 85, 50 210, 20 210" stroke="#10b981" stroke-width="1.5" fill="none" opacity="0.5" />
+              <!-- Parse → Transform -->
+              <path d="M 350 65 C 380 65, 260 200, 240 200" stroke="#10b981" stroke-width="1.5" fill="none" opacity="0.5" />
+              <!-- Filter → Aggregate -->
+              <path d="M 150 240 C 300 240, 400 210, 460 210" stroke="#f59e0b" stroke-width="1.5" fill="none" opacity="0.5" />
+              <!-- Transform → Aggregate -->
+              <path d="M 370 230 C 410 230, 430 210, 460 210" stroke="#8b5cf6" stroke-width="1.5" fill="none" opacity="0.5" />
+              <!-- Aggregate → Database -->
+              <path d="M 560 240 C 580 240, 580 340, 560 360" stroke="#ec4899" stroke-width="1.5" fill="none" opacity="0.5" />
+            </svg>
+
+            <!-- HTTP Request Node -->
+            <div class="pe-node pe-http">
+              <div class="pe-node-header">
+                <div class="pe-node-icon">H</div>
+                HTTP Request
+              </div>
+              <div class="pe-node-body">
+                <div class="pe-field">
+                  <span>endpoint</span>
+                  <span class="pe-field-val">/api/users</span>
+                </div>
+                <div class="pe-field">
+                  <span>method</span>
+                  <div class="pe-port" style="border-color: #3b82f6;"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- JSON Parse Node -->
+            <div class="pe-node pe-parse">
+              <div class="pe-node-header">
+                <div class="pe-node-icon">J</div>
+                JSON Parse
+              </div>
+              <div class="pe-node-body">
+                <div class="pe-field">
+                  <div class="pe-port" style="border-color: #10b981;"></div>
+                  <span>input</span>
+                </div>
+                <div class="pe-field">
+                  <span>path</span>
+                  <span class="pe-field-val">$.data</span>
+                </div>
+                <div class="pe-field">
+                  <span>output</span>
+                  <div class="pe-port" style="border-color: #10b981;"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Filter Node -->
+            <div class="pe-node pe-filter">
+              <div class="pe-node-header">
+                <div class="pe-node-icon">F</div>
+                Filter
+              </div>
+              <div class="pe-node-body">
+                <div class="pe-field">
+                  <div class="pe-port" style="border-color: #f59e0b;"></div>
+                  <span>data</span>
+                </div>
+                <div class="pe-field">
+                  <span>condition</span>
+                  <span class="pe-field-val">active</span>
+                </div>
+                <div class="pe-field">
+                  <span>output</span>
+                  <div class="pe-port" style="border-color: #f59e0b;"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Transform Node -->
+            <div class="pe-node pe-transform">
+              <div class="pe-node-header">
+                <div class="pe-node-icon">T</div>
+                Transform
+              </div>
+              <div class="pe-node-body">
+                <div class="pe-field">
+                  <div class="pe-port" style="border-color: #8b5cf6;"></div>
+                  <span>input</span>
+                </div>
+                <div class="pe-field">
+                  <span>fn</span>
+                  <span class="pe-field-val">normalize</span>
+                </div>
+                <div class="pe-field">
+                  <span>output</span>
+                  <div class="pe-port" style="border-color: #8b5cf6;"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Aggregate Node -->
+            <div class="pe-node pe-aggregate">
+              <div class="pe-node-header">
+                <div class="pe-node-icon">A</div>
+                Aggregate
+              </div>
+              <div class="pe-node-body">
+                <div class="pe-field">
+                  <div class="pe-port" style="border-color: #ec4899;"></div>
+                  <span>a</span>
+                </div>
+                <div class="pe-field">
+                  <div class="pe-port" style="border-color: #ec4899;"></div>
+                  <span>b</span>
+                </div>
+                <div class="pe-field">
+                  <span>method</span>
+                  <span class="pe-field-val">merge</span>
+                </div>
+                <div class="pe-field">
+                  <span>output</span>
+                  <div class="pe-port" style="border-color: #ec4899;"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Database Node -->
+            <div class="pe-node pe-database">
+              <div class="pe-node-header">
+                <div class="pe-node-icon">D</div>
+                Database
+              </div>
+              <div class="pe-node-body">
+                <div class="pe-field">
+                  <div class="pe-port" style="border-color: #14b8a6;"></div>
+                  <span>data</span>
+                </div>
+                <div class="pe-field">
+                  <span>table</span>
+                  <span class="pe-field-val">users</span>
+                </div>
+                <div class="pe-field">
+                  <span>action</span>
+                  <span class="pe-field-val">upsert</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Comment -->
+            <div class="pe-comment">
+              <div class="pe-comment-title">Note</div>
+              Pipeline fetches user data, filters active accounts, normalizes fields, and upserts to DB.
+            </div>
+
+            <!-- Minimap -->
+            <div class="pe-minimap">
+              <div class="pe-minimap-dot" style="width:14px;height:8px;background:#3b82f6;opacity:0.5;top:8px;left:5px;"></div>
+              <div class="pe-minimap-dot" style="width:14px;height:8px;background:#10b981;opacity:0.5;top:8px;left:30px;"></div>
+              <div class="pe-minimap-dot" style="width:14px;height:10px;background:#f59e0b;opacity:0.5;top:30px;left:5px;"></div>
+              <div class="pe-minimap-dot" style="width:14px;height:10px;background:#8b5cf6;opacity:0.5;top:30px;left:34px;"></div>
+              <div class="pe-minimap-dot" style="width:14px;height:10px;background:#ec4899;opacity:0.5;top:30px;left:63px;"></div>
+              <div class="pe-minimap-dot" style="width:14px;height:10px;background:#14b8a6;opacity:0.5;top:50px;left:63px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header">SVG Output</div>
+      <div class="panel-body" id="pipeline-output">
+        <span style="color:#444; font-size:13px;">Click "Export Pipeline" to render</span>
       </div>
     </div>
   </div>
@@ -581,6 +1077,64 @@
             <div class="feat-skew">SKEW</div>
             <div class="label">Skew Transform</div>
           </div>
+
+          <!-- Row 5 -->
+          <div class="feature-card">
+            <div class="feat-radial"></div>
+            <div class="label">Radial Gradient</div>
+          </div>
+          <div class="feature-card">
+            <div class="feat-dashed">dashed</div>
+            <div class="label">Dashed Border</div>
+          </div>
+          <div class="feature-card">
+            <div class="feat-deep">
+              <div class="feat-deep-inner1">
+                <div class="feat-deep-inner2"></div>
+              </div>
+            </div>
+            <div class="label">Deep Nesting</div>
+          </div>
+          <div class="feature-card">
+            <div class="feat-letter">hello</div>
+            <div class="label">Letter Spacing</div>
+          </div>
+
+          <!-- Row 6 -->
+          <div class="feature-card">
+            <div class="feat-badge-wrap">
+              <div class="feat-badge" style="background:#ef4444;">1</div>
+              <div class="feat-badge" style="background:#3b82f6;">2</div>
+              <div class="feat-badge" style="background:#10b981;">3</div>
+              <div class="feat-badge" style="background:#8b5cf6;">4</div>
+              <div class="feat-badge" style="background:#f59e0b;">5</div>
+            </div>
+            <div class="label">Badge Circles</div>
+          </div>
+          <div class="feature-card">
+            <div class="feat-combo">
+              <div class="feat-combo-inner"></div>
+            </div>
+            <div class="label">Combined Effects</div>
+          </div>
+          <div class="feature-card">
+            <div class="feat-clip-text">
+              SVG
+              <small>Exported text</small>
+            </div>
+            <div class="label">Large Text</div>
+          </div>
+          <div class="feature-card">
+            <div class="feat-opacity" style="height:auto;">
+              <div style="position:relative;width:80px;height:60px;">
+                <div style="position:absolute;inset:0;background:linear-gradient(135deg,#0ea5e9,#6366f1);border-radius:8px;"></div>
+                <div style="position:absolute;top:6px;left:6px;right:6px;bottom:6px;background:rgba(0,0,0,0.4);border-radius:5px;display:flex;align-items:center;justify-content:center;">
+                  <span style="font-size:10px;font-weight:700;color:white;">overlay</span>
+                </div>
+              </div>
+            </div>
+            <div class="label">Glass Overlay</div>
+          </div>
         </div>
       </div>
     </div>
@@ -597,6 +1151,7 @@
 
     const status = document.getElementById("status");
     const btnEditor = document.getElementById("btn-export-editor");
+    const btnPipeline = document.getElementById("btn-export-pipeline");
     const btnGrid = document.getElementById("btn-export-grid");
     const btnAll = document.getElementById("btn-export-all");
     const btnDownload = document.getElementById("btn-download");
@@ -624,8 +1179,6 @@
         status.textContent = `Done in ${ms}ms`;
 
         out.innerHTML = "";
-        // Insert the SVG into the page by parsing the string
-        // (the result.svg lives in a different document)
         const wrapper = document.createElement("div");
         wrapper.innerHTML = result.toString();
         const svg = wrapper.firstElementChild;
@@ -642,9 +1195,11 @@
     }
 
     btnEditor.addEventListener("click", () => exportElement("node-editor", "editor-output"));
+    btnPipeline.addEventListener("click", () => exportElement("pipeline-editor", "pipeline-output"));
     btnGrid.addEventListener("click", () => exportElement("feature-grid", "grid-output"));
     btnAll.addEventListener("click", async () => {
       await exportElement("node-editor", "editor-output");
+      await exportElement("pipeline-editor", "pipeline-output");
       await exportElement("feature-grid", "grid-output");
     });
     btnDownload.addEventListener("click", () => {
