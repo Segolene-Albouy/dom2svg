@@ -104,6 +104,9 @@ export async function renderHtmlElement(
       renderBorders(group, box, borders, radii, ctx);
     }
 
+    // Outline (rendered outside the border box)
+    renderOutline(styles, box, radii, ctx, group);
+
     // <img> element
     if (isImageElement(element) && element.src) {
       const dataUrl = await imageToDataUrl(element.src);
@@ -361,6 +364,53 @@ function applyClipMask(
   wrapper.setAttribute("mask", `url(#${maskId})`);
   wrapper.appendChild(target);
   group.appendChild(wrapper);
+}
+
+/** Render CSS outline as a stroked shape outside the border box */
+function renderOutline(
+  styles: CSSStyleDeclaration,
+  box: BoxGeometry,
+  radii: BorderRadii,
+  ctx: RenderContext,
+  group: SVGGElement,
+): void {
+  const outlineStyle = styles.outlineStyle;
+  if (!outlineStyle || outlineStyle === "none") return;
+
+  const outlineWidth = parseFloat(styles.outlineWidth) || 0;
+  if (outlineWidth <= 0) return;
+
+  const outlineColor = styles.outlineColor || styles.color;
+  const outlineOffset = parseFloat(styles.outlineOffset) || 0;
+
+  // The outline sits outlineOffset + outlineWidth/2 from the border edge
+  const expand = outlineOffset + outlineWidth / 2;
+  const outlineBox: BoxGeometry = {
+    x: box.x - expand,
+    y: box.y - expand,
+    width: box.width + expand * 2,
+    height: box.height + expand * 2,
+  };
+
+  // Expand radii by the offset
+  const outlineRadii: BorderRadii = {
+    topLeft: [Math.max(0, radii.topLeft[0] + expand), Math.max(0, radii.topLeft[1] + expand)],
+    topRight: [Math.max(0, radii.topRight[0] + expand), Math.max(0, radii.topRight[1] + expand)],
+    bottomRight: [Math.max(0, radii.bottomRight[0] + expand), Math.max(0, radii.bottomRight[1] + expand)],
+    bottomLeft: [Math.max(0, radii.bottomLeft[0] + expand), Math.max(0, radii.bottomLeft[1] + expand)],
+  };
+
+  const shape = createBoxShape(outlineBox, outlineRadii, ctx);
+  setAttributes(shape, {
+    fill: "none",
+    stroke: outlineColor,
+    "stroke-width": outlineWidth,
+  });
+
+  const dash = borderDashArray(outlineStyle, outlineWidth);
+  if (dash) shape.setAttribute("stroke-dasharray", dash);
+
+  group.appendChild(shape);
 }
 
 /** Split a CSS value list on commas respecting parentheses */
