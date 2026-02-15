@@ -24,6 +24,7 @@ import { imageToDataUrl, extractUrlFromCss, canvasToDataUrl } from "../assets/im
 import { cssTransformToSvg } from "../transforms/svg.js";
 import { createDropShadowFilter } from "../assets/filters.js";
 import { parseBoxShadows, renderBoxShadows } from "../assets/box-shadow.js";
+import { parseClipPath, createSvgClipPath } from "../assets/clip-path.js";
 
 /**
  * Render an HTML element's visual properties (background, borders, overflow mask).
@@ -49,6 +50,16 @@ export async function renderHtmlElement(
     );
     if (svgTransform) {
       group.setAttribute("transform", svgTransform);
+    }
+  }
+
+  // CSS clip-path (applied even when visibility:hidden, like transforms)
+  const clipPathValue = styles.clipPath;
+  if (clipPathValue && clipPathValue !== "none") {
+    const shape = parseClipPath(clipPathValue);
+    if (shape) {
+      const clipId = createSvgClipPath(shape, box, ctx);
+      group.setAttribute("clip-path", `url(#${clipId})`);
     }
   }
 
