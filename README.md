@@ -10,6 +10,10 @@ A node-based pipeline editor — DOM on the left, exported SVG on the right:
 
 ![Pipeline editor export](media/demo-pipeline.png)
 
+Real-world UI components (stat cards, avatars, alerts, buttons, progress bars, charts, palettes, tables):
+
+![Real-world components](media/demo-components.png)
+
 24 CSS features rendered as DOM elements and their SVG counterparts:
 
 ![Feature showcase](media/demo-features.png)

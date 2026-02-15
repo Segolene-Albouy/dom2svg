@@ -670,6 +670,189 @@
       position: absolute;
       border-radius: 2px;
     }
+
+    /* ================= REAL-WORLD COMPONENTS ================= */
+    .rw-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      width: 680px;
+    }
+    .rw-card {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 10px;
+      padding: 16px;
+    }
+
+    /* Stat Card */
+    .rw-stat-value {
+      font-size: 28px;
+      font-weight: 800;
+      color: #e0e0e0;
+      line-height: 1.1;
+    }
+    .rw-stat-label {
+      font-size: 11px;
+      color: #666;
+      margin-top: 4px;
+    }
+    .rw-stat-trend {
+      font-size: 12px;
+      font-weight: 600;
+      color: #10b981;
+      margin-top: 6px;
+    }
+
+    /* Avatar Card */
+    .rw-avatar-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .rw-avatar-circle {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #8b5cf6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 700;
+      color: white;
+      flex-shrink: 0;
+    }
+    .rw-avatar-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #e0e0e0;
+    }
+    .rw-avatar-role {
+      font-size: 10px;
+      color: #666;
+      margin-top: 2px;
+    }
+
+    /* Alert Banner */
+    .rw-alert {
+      background: rgba(245, 158, 11, 0.08);
+      border-left: 3px solid #f59e0b;
+      border-radius: 0 6px 6px 0;
+      padding: 10px 12px;
+    }
+    .rw-alert-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: #f59e0b;
+      margin-bottom: 4px;
+    }
+    .rw-alert-msg {
+      font-size: 10px;
+      color: #aaa;
+      line-height: 1.4;
+    }
+
+    /* Button Group */
+    .rw-btn-group {
+      display: inline-flex;
+      gap: 6px;
+    }
+    .rw-btn {
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      color: white;
+      border: none;
+    }
+    .rw-btn-primary { background: #3b82f6; }
+    .rw-btn-success { background: #10b981; }
+    .rw-btn-danger { background: #ef4444; }
+
+    /* Progress Bar */
+    .rw-progress-label {
+      font-size: 11px;
+      color: #888;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .rw-progress-track {
+      height: 8px;
+      background: #2a2a2a;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .rw-progress-fill {
+      height: 100%;
+      width: 72%;
+      background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+      border-radius: 4px;
+    }
+
+    /* Mini Bar Chart */
+    .rw-chart {
+      display: flex;
+      align-items: flex-end;
+      gap: 6px;
+      height: 60px;
+    }
+    .rw-bar {
+      flex: 1;
+      border-radius: 3px 3px 0 0;
+      min-width: 12px;
+    }
+
+    /* Color Palette */
+    .rw-palette {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+    }
+    .rw-swatch {
+      height: 28px;
+      border-radius: 4px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .rw-swatch-label {
+      font-size: 7px;
+      color: rgba(255,255,255,0.7);
+      padding-bottom: 2px;
+      font-weight: 600;
+    }
+
+    /* Table Row */
+    .rw-table-row {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 8px;
+      border-bottom: 1px solid #2a2a2a;
+      padding-bottom: 8px;
+      align-items: center;
+    }
+    .rw-table-cell {
+      font-size: 11px;
+      color: #ccc;
+    }
+    .rw-table-cell-dim {
+      font-size: 11px;
+      color: #666;
+      text-align: right;
+    }
+    .rw-table-badge {
+      font-size: 9px;
+      font-weight: 600;
+      color: #10b981;
+      background: rgba(16, 185, 129, 0.1);
+      padding: 2px 8px;
+      border-radius: 999px;
+      text-align: center;
+      width: fit-content;
+      justify-self: end;
+    }
   </style>
 </head>
 <body>
@@ -974,6 +1157,103 @@
     </div>
   </div>
 
+  <!-- ===== REAL-WORLD COMPONENTS ===== -->
+  <h3>Real-World Components</h3>
+  <div class="controls">
+    <button id="btn-export-components">Export Components</button>
+  </div>
+  <div class="split">
+    <div class="panel">
+      <div class="panel-header">DOM Source</div>
+      <div class="panel-body">
+        <div class="rw-grid" id="rw-components">
+          <!-- Stat Card -->
+          <div class="rw-card">
+            <div class="rw-stat-value">2,847</div>
+            <div class="rw-stat-label">Monthly active users</div>
+            <div class="rw-stat-trend">&#9650; 12.5%</div>
+          </div>
+
+          <!-- Avatar Card -->
+          <div class="rw-card">
+            <div class="rw-avatar-row">
+              <div class="rw-avatar-circle">JD</div>
+              <div>
+                <div class="rw-avatar-name">Jane Doe</div>
+                <div class="rw-avatar-role">Lead Designer</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Alert Banner -->
+          <div class="rw-card" style="padding:0;">
+            <div class="rw-alert">
+              <div class="rw-alert-title">&#9888; Rate limit warning</div>
+              <div class="rw-alert-msg">API usage at 89% of quota. Consider upgrading your plan.</div>
+            </div>
+          </div>
+
+          <!-- Button Group -->
+          <div class="rw-card" style="display:flex;align-items:center;justify-content:center;">
+            <div class="rw-btn-group">
+              <div class="rw-btn rw-btn-primary">Save</div>
+              <div class="rw-btn rw-btn-success">Publish</div>
+              <div class="rw-btn rw-btn-danger">Delete</div>
+            </div>
+          </div>
+
+          <!-- Progress Bar -->
+          <div class="rw-card">
+            <div class="rw-progress-label">
+              <span>Storage</span>
+              <span>72%</span>
+            </div>
+            <div class="rw-progress-track">
+              <div class="rw-progress-fill"></div>
+            </div>
+          </div>
+
+          <!-- Mini Bar Chart -->
+          <div class="rw-card">
+            <div class="rw-chart">
+              <div class="rw-bar" style="height:40%;background:#3b82f6;"></div>
+              <div class="rw-bar" style="height:70%;background:#8b5cf6;"></div>
+              <div class="rw-bar" style="height:55%;background:#ec4899;"></div>
+              <div class="rw-bar" style="height:90%;background:#10b981;"></div>
+              <div class="rw-bar" style="height:65%;background:#f59e0b;"></div>
+            </div>
+          </div>
+
+          <!-- Color Palette -->
+          <div class="rw-card">
+            <div class="rw-palette">
+              <div class="rw-swatch" style="background:#ef4444;"><span class="rw-swatch-label">#EF4</span></div>
+              <div class="rw-swatch" style="background:#f59e0b;"><span class="rw-swatch-label">#F59</span></div>
+              <div class="rw-swatch" style="background:#10b981;"><span class="rw-swatch-label">#10B</span></div>
+              <div class="rw-swatch" style="background:#3b82f6;"><span class="rw-swatch-label">#3B8</span></div>
+              <div class="rw-swatch" style="background:#8b5cf6;"><span class="rw-swatch-label">#8B5</span></div>
+            </div>
+          </div>
+
+          <!-- Table Row -->
+          <div class="rw-card">
+            <div class="rw-table-row">
+              <div class="rw-table-cell">user_sessions</div>
+              <div class="rw-table-cell-dim">1.2k rows</div>
+              <div class="rw-table-badge">Active</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header">SVG Output</div>
+      <div class="panel-body" id="components-output">
+        <span style="color:#444; font-size:13px;">Click "Export Components" to render</span>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== FEATURE GRID ===== -->
   <h3>Feature Showcase</h3>
   <div class="split">
@@ -1155,6 +1435,7 @@
     const status = document.getElementById("status");
     const btnEditor = document.getElementById("btn-export-editor");
     const btnPipeline = document.getElementById("btn-export-pipeline");
+    const btnComponents = document.getElementById("btn-export-components");
     const btnGrid = document.getElementById("btn-export-grid");
     const btnAll = document.getElementById("btn-export-all");
     const btnDownload = document.getElementById("btn-download");
@@ -1199,10 +1480,12 @@
 
     btnEditor.addEventListener("click", () => exportElement("node-editor", "editor-output"));
     btnPipeline.addEventListener("click", () => exportElement("pipeline-editor", "pipeline-output"));
+    btnComponents.addEventListener("click", () => exportElement("rw-components", "components-output"));
     btnGrid.addEventListener("click", () => exportElement("feature-grid", "grid-output"));
     btnAll.addEventListener("click", async () => {
       await exportElement("node-editor", "editor-output");
       await exportElement("pipeline-editor", "pipeline-output");
+      await exportElement("rw-components", "components-output");
       await exportElement("feature-grid", "grid-output");
     });
     btnDownload.addEventListener("click", () => {
