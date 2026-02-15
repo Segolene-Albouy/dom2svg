@@ -20,6 +20,7 @@ import {
 import { parseLinearGradient, createSvgLinearGradient } from "../assets/gradients.js";
 import { imageToDataUrl, extractUrlFromCss, canvasToDataUrl } from "../assets/images.js";
 import { cssTransformToSvg } from "../transforms/svg.js";
+import { createDropShadowFilter } from "../assets/filters.js";
 
 /**
  * Render an HTML element's visual properties (background, borders, overflow mask).
@@ -48,10 +49,18 @@ export async function renderHtmlElement(
     }
   }
 
+  // CSS Filters (drop-shadow)
+  if (styles.filter && styles.filter !== "none") {
+    const filterId = createDropShadowFilter(styles.filter, ctx);
+    if (filterId) {
+      group.setAttribute("filter", `url(#${filterId})`);
+    }
+  }
+
   // Background color
   const bgColor = parseBackgroundColor(styles);
   if (bgColor) {
-    const rect = createBoxRect(box, radii, ctx);
+    const rect = createBoxShape(box, radii, ctx);
     rect.setAttribute("fill", bgColor);
     group.appendChild(rect);
   }
@@ -62,7 +71,7 @@ export async function renderHtmlElement(
     const gradient = parseLinearGradient(bgImage);
     if (gradient) {
       const gradientEl = createSvgLinearGradient(gradient, ctx);
-      const rect = createBoxRect(box, radii, ctx);
+      const rect = createBoxShape(box, radii, ctx);
       rect.setAttribute("fill", `url(#${gradientEl.getAttribute("id")})`);
       group.appendChild(rect);
     } else {
@@ -160,12 +169,19 @@ export function getChildTarget(group: SVGGElement): SVGElement {
   return (group as any).__childTarget ?? group;
 }
 
-/** Create an SVG rect or rounded rect for a box */
-function createBoxRect(
+/**
+ * Create an SVG shape for a box — <rect> for uniform/no radius,
+ * <path> for non-uniform border-radius.
+ */
+function createBoxShape(
   box: BoxGeometry,
   radii: BorderRadii,
   ctx: RenderContext,
-): SVGRectElement {
+): SVGElement {
+  if (hasRadius(radii) && !isUniformRadius(radii)) {
+    return createRoundedRectPath(box, radii, ctx);
+  }
+
   const rect = createSvgElement(ctx.svgDocument, "rect");
   setAttributes(rect, {
     x: box.x,
@@ -182,6 +198,39 @@ function createBoxRect(
   }
 
   return rect;
+}
+
+/** Create a <path> with non-uniform border-radius */
+function createRoundedRectPath(
+  box: BoxGeometry,
+  radii: BorderRadii,
+  ctx: RenderContext,
+): SVGPathElement {
+  const { x, y, width, height } = box;
+  const [tlx, tly] = radii.topLeft;
+  const [trx, try_] = radii.topRight;
+  const [brx, bry] = radii.bottomRight;
+  const [blx, bly] = radii.bottomLeft;
+
+  // Build path with elliptical arcs for each corner
+  const d = [
+    `M ${x + tlx} ${y}`,
+    `L ${x + width - trx} ${y}`,
+    trx || try_ ? `A ${trx} ${try_} 0 0 1 ${x + width} ${y + try_}` : "",
+    `L ${x + width} ${y + height - bry}`,
+    brx || bry ? `A ${brx} ${bry} 0 0 1 ${x + width - brx} ${y + height}` : "",
+    `L ${x + blx} ${y + height}`,
+    blx || bly ? `A ${blx} ${bly} 0 0 1 ${x} ${y + height - bly}` : "",
+    `L ${x} ${y + tly}`,
+    tlx || tly ? `A ${tlx} ${tly} 0 0 1 ${x + tlx} ${y}` : "",
+    "Z",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const path = createSvgElement(ctx.svgDocument, "path");
+  path.setAttribute("d", d);
+  return path;
 }
 
 /** Render borders as SVG rects (strokes) */
@@ -292,7 +341,7 @@ function createOverflowMask(
   const mask = createSvgElement(ctx.svgDocument, "mask");
   mask.setAttribute("id", maskId);
 
-  const maskRect = createBoxRect(box, radii, ctx);
+  const maskRect = createBoxShape(box, radii, ctx);
   maskRect.setAttribute("fill", "white");
   mask.appendChild(maskRect);
   ctx.defs.appendChild(mask);
@@ -315,7 +364,7 @@ function applyClipMask(
   const mask = createSvgElement(ctx.svgDocument, "mask");
   mask.setAttribute("id", maskId);
 
-  const maskRect = createBoxRect(box, radii, ctx);
+  const maskRect = createBoxShape(box, radii, ctx);
   maskRect.setAttribute("fill", "white");
   mask.appendChild(maskRect);
   ctx.defs.appendChild(mask);
