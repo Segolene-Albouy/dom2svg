@@ -20,7 +20,8 @@
     "build": "tsup",
     "type-check": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "demo": "vite --config demo/vite.config.ts"
   },
   "dependencies": {
     "opentype.js": "^1.3.4"
