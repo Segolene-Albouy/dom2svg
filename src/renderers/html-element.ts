@@ -114,9 +114,10 @@ export async function renderHtmlElement(
       height: box.height,
       href: dataUrl,
     });
-    if (element.style.objectFit === "contain") {
+    const objectFit = styles.objectFit || element.style.objectFit;
+    if (objectFit === "contain") {
       imgEl.setAttribute("preserveAspectRatio", "xMidYMid meet");
-    } else if (element.style.objectFit === "cover") {
+    } else if (objectFit === "cover") {
       imgEl.setAttribute("preserveAspectRatio", "xMidYMid slice");
     }
     group.appendChild(imgEl);
@@ -250,6 +251,8 @@ function renderBorders(
     borders.right.color === borders.bottom.color &&
     borders.bottom.color === borders.left.color &&
     borders.top.style === borders.right.style &&
+    borders.right.style === borders.bottom.style &&
+    borders.bottom.style === borders.left.style &&
     borders.top.width > 0 &&
     borders.top.style !== "none"
   ) {

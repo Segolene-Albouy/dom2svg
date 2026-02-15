@@ -128,7 +128,8 @@ export function hasBackgroundImage(styles: CSSStyleDeclaration): boolean {
 
 /** Parse opacity value */
 export function parseOpacity(styles: CSSStyleDeclaration): number {
-  return parseFloat(styles.opacity) || 1;
+  const value = parseFloat(styles.opacity);
+  return isNaN(value) ? 1 : value;
 }
 
 /** Check if element creates a new stacking context */

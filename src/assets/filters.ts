@@ -39,19 +39,30 @@ export function createDropShadowFilter(
   return id;
 }
 
-interface DropShadow {
+export interface DropShadow {
   offsetX: number;
   offsetY: number;
   blur: number;
   color: string;
 }
 
-function parseDropShadow(value: string): DropShadow | null {
-  // Match drop-shadow(...)
-  const match = value.match(/drop-shadow\((.+?)\)/);
-  if (!match) return null;
+/** @internal Exported for testing */
+export function parseDropShadow(value: string): DropShadow | null {
+  // Match drop-shadow(...) respecting nested parentheses (e.g. rgba())
+  const startIdx = value.indexOf("drop-shadow(");
+  if (startIdx === -1) return null;
 
-  const args = match[1]!.trim();
+  const argsStart = startIdx + "drop-shadow(".length;
+  let depth = 1;
+  let argsEnd = argsStart;
+  for (let i = argsStart; i < value.length && depth > 0; i++) {
+    if (value[i] === "(") depth++;
+    else if (value[i] === ")") depth--;
+    if (depth > 0) argsEnd = i + 1;
+  }
+
+  const args = value.slice(argsStart, argsEnd).trim();
+  if (!args) return null;
 
   // Parse: offsetX offsetY [blur] [color]
   // Color can be at start or end, with various formats

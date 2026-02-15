@@ -14,7 +14,7 @@ export interface DomToSvgOptions {
   fonts?: FontMapping;
   /** CSS selector or predicate to exclude elements */
   exclude?: string | ((element: Element) => boolean);
-  /** Custom handler for specific elements — return SVGElement or null to skip */
+  /** Custom handler for specific elements — return SVGElement to use it, or null to fall through to default rendering */
   handler?: (element: Element, context: RenderContext) => SVGElement | null;
   /** Background color for the root SVG (default: transparent) */
   background?: string;
