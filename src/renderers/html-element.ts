@@ -93,55 +93,9 @@ export async function renderHtmlElement(
       group.appendChild(rect);
     }
 
-    // Background image (gradients)
+    // Background image (gradients + URLs)
     if (hasBackgroundImage(styles)) {
-      const bgImage = styles.backgroundImage;
-      const gradient = parseLinearGradient(bgImage);
-      if (gradient) {
-        const gradientEl = createSvgLinearGradient(gradient, box, ctx);
-        const rect = createBoxShape(box, radii, ctx);
-        rect.setAttribute("fill", `url(#${gradientEl.getAttribute("id")})`);
-        group.appendChild(rect);
-      } else {
-        // Conic / radial gradient — rasterize via Canvas 2D API
-        const rasterized = rasterizeGradient(bgImage, box.width, box.height);
-        if (rasterized) {
-          const imgEl = createSvgElement(ctx.svgDocument, "image");
-          setAttributes(imgEl, {
-            x: box.x,
-            y: box.y,
-            width: box.width,
-            height: box.height,
-            href: rasterized,
-            preserveAspectRatio: "none",
-          });
-          if (hasRadius(radii)) {
-            applyClipMask(imgEl, box, radii, ctx, group);
-          } else {
-            group.appendChild(imgEl);
-          }
-        }
-
-        // Background image URL
-        const url = !rasterized ? extractUrlFromCss(bgImage) : null;
-        if (url) {
-          const dataUrl = await imageToDataUrl(url);
-          const imgEl = createSvgElement(ctx.svgDocument, "image");
-          setAttributes(imgEl, {
-            x: box.x,
-            y: box.y,
-            width: box.width,
-            height: box.height,
-            href: dataUrl,
-            preserveAspectRatio: "none",
-          });
-          if (hasRadius(radii)) {
-            applyClipMask(imgEl, box, radii, ctx, group);
-          } else {
-            group.appendChild(imgEl);
-          }
-        }
-      }
+      await renderBackgroundImages(styles, box, radii, ctx, group);
     }
 
     // Borders
@@ -407,6 +361,167 @@ function applyClipMask(
   wrapper.setAttribute("mask", `url(#${maskId})`);
   wrapper.appendChild(target);
   group.appendChild(wrapper);
+}
+
+/** Split a CSS value list on commas respecting parentheses */
+function splitCssValueList(str: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let current = "";
+  for (const char of str) {
+    if (char === "(") depth++;
+    else if (char === ")") depth--;
+    if (char === "," && depth === 0) {
+      parts.push(current.trim());
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+  if (current.trim()) parts.push(current.trim());
+  return parts;
+}
+
+interface BackgroundPlacement {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  preserveAspectRatio: string;
+}
+
+/** Compute background image placement from background-size and background-position */
+function computeBackgroundPlacement(
+  bgSize: string,
+  bgPosition: string,
+  box: BoxGeometry,
+): BackgroundPlacement {
+  let width = box.width;
+  let height = box.height;
+  let par = "none";
+
+  // background-size
+  if (bgSize === "contain") {
+    par = "xMidYMid meet";
+  } else if (bgSize === "cover") {
+    par = "xMidYMid slice";
+  } else if (bgSize && bgSize !== "auto") {
+    const sizeParts = bgSize.split(/\s+/);
+    const w = parseBgDimension(sizeParts[0]!, box.width);
+    const h = parseBgDimension(sizeParts[1] ?? "auto", box.height);
+    if (w !== null) width = w;
+    if (h !== null) height = h;
+  }
+
+  // background-position
+  let x = box.x;
+  let y = box.y;
+  if (bgPosition && bgPosition !== "0% 0%") {
+    const posParts = bgPosition.split(/\s+/);
+    x = box.x + parseBgOffset(posParts[0] ?? "0px", box.width, width);
+    y = box.y + parseBgOffset(posParts[1] ?? "0px", box.height, height);
+  }
+
+  return { x, y, width, height, preserveAspectRatio: par };
+}
+
+function parseBgDimension(value: string, containerSize: number): number | null {
+  if (value === "auto") return null;
+  if (value.endsWith("%")) return (parseFloat(value) / 100) * containerSize;
+  return parseFloat(value) || null;
+}
+
+function parseBgOffset(value: string, containerSize: number, imageSize: number): number {
+  if (value.endsWith("%")) {
+    const pct = parseFloat(value) / 100;
+    return pct * (containerSize - imageSize);
+  }
+  return parseFloat(value) || 0;
+}
+
+/** Render background image layers */
+async function renderBackgroundImages(
+  styles: CSSStyleDeclaration,
+  box: BoxGeometry,
+  radii: BorderRadii,
+  ctx: RenderContext,
+  group: SVGGElement,
+): Promise<void> {
+  const bgImages = splitCssValueList(styles.backgroundImage);
+  const bgSizes = splitCssValueList(styles.backgroundSize);
+  const bgPositions = splitCssValueList(styles.backgroundPosition);
+
+  // CSS layers: first = topmost, SVG: last appended = topmost
+  // Iterate in reverse so CSS-topmost layer is appended last (= SVG topmost)
+  for (let i = bgImages.length - 1; i >= 0; i--) {
+    const bgImage = bgImages[i]!;
+    if (bgImage === "none") continue;
+
+    const bgSize = bgSizes[i] ?? bgSizes[bgSizes.length - 1] ?? "auto";
+    const bgPosition = bgPositions[i] ?? bgPositions[bgPositions.length - 1] ?? "0% 0%";
+    const placement = computeBackgroundPlacement(bgSize, bgPosition, box);
+
+    await renderSingleBackgroundLayer(bgImage, placement, box, radii, ctx, group);
+  }
+}
+
+/** Render a single background image layer */
+async function renderSingleBackgroundLayer(
+  bgImage: string,
+  placement: BackgroundPlacement,
+  box: BoxGeometry,
+  radii: BorderRadii,
+  ctx: RenderContext,
+  group: SVGGElement,
+): Promise<void> {
+  const gradient = parseLinearGradient(bgImage);
+  if (gradient) {
+    const gradientEl = createSvgLinearGradient(gradient, box, ctx);
+    const rect = createBoxShape(box, radii, ctx);
+    rect.setAttribute("fill", `url(#${gradientEl.getAttribute("id")})`);
+    group.appendChild(rect);
+    return;
+  }
+
+  // Conic / radial gradient — rasterize via Canvas 2D API
+  const rasterized = rasterizeGradient(bgImage, placement.width, placement.height);
+  if (rasterized) {
+    const imgEl = createSvgElement(ctx.svgDocument, "image");
+    setAttributes(imgEl, {
+      x: placement.x,
+      y: placement.y,
+      width: placement.width,
+      height: placement.height,
+      href: rasterized,
+      preserveAspectRatio: placement.preserveAspectRatio,
+    });
+    if (hasRadius(radii)) {
+      applyClipMask(imgEl, box, radii, ctx, group);
+    } else {
+      group.appendChild(imgEl);
+    }
+    return;
+  }
+
+  // Background image URL
+  const url = extractUrlFromCss(bgImage);
+  if (url) {
+    const dataUrl = await imageToDataUrl(url);
+    const imgEl = createSvgElement(ctx.svgDocument, "image");
+    setAttributes(imgEl, {
+      x: placement.x,
+      y: placement.y,
+      width: placement.width,
+      height: placement.height,
+      href: dataUrl,
+      preserveAspectRatio: placement.preserveAspectRatio,
+    });
+    if (hasRadius(radii)) {
+      applyClipMask(imgEl, box, radii, ctx, group);
+    } else {
+      group.appendChild(imgEl);
+    }
+  }
 }
 
 /** Render a pseudo-element (::before or ::after) */
