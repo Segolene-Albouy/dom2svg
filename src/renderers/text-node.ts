@@ -52,8 +52,20 @@ export async function renderTextNode(
   const lines = getTextLines(textNode, rootRect, ascenderRatio);
   const textTransform = styles.textTransform;
 
+  // Detect text-overflow: ellipsis
+  const needsEllipsis =
+    styles.textOverflow === "ellipsis" &&
+    styles.overflow !== "visible" &&
+    styles.whiteSpace === "nowrap" &&
+    parent.scrollWidth > parent.clientWidth;
+
   for (const line of lines) {
-    const displayText = applyTextTransform(line.text, textTransform);
+    let displayText = applyTextTransform(line.text, textTransform);
+
+    // Append ellipsis to the last line when text overflows
+    if (needsEllipsis && line === lines[lines.length - 1]) {
+      displayText = displayText.trimEnd() + "\u2026";
+    }
     if (font) {
       // Path mode: convert text to <path>
       const pathData = textToPath(font, displayText, line.x, line.y, fontSize);
