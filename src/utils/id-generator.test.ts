@@ -1,7 +1,11 @@
-import { describe, it, expect } from "vitest";
-import { createIdGenerator } from "./id-generator.js";
+import { describe, it, expect, beforeEach } from "vitest";
+import { createIdGenerator, resetIdCounter } from "./id-generator.js";
 
 describe("createIdGenerator", () => {
+  beforeEach(() => {
+    resetIdCounter();
+  });
+
   it("generates sequential IDs with default prefix", () => {
     const gen = createIdGenerator();
     expect(gen.next()).toBe("d2s-0");
@@ -23,14 +27,14 @@ describe("createIdGenerator", () => {
     expect(gen.next("c")).toBe("c-2");
   });
 
-  it("separate generators have independent counters", () => {
+  it("separate generators share the global counter to avoid ID collisions", () => {
     const gen1 = createIdGenerator();
     const gen2 = createIdGenerator();
     expect(gen1.next()).toBe("d2s-0");
-    expect(gen2.next()).toBe("d2s-0");
-    gen1.next();
-    gen1.next();
-    expect(gen1.next()).toBe("d2s-3");
     expect(gen2.next()).toBe("d2s-1");
+    gen1.next();
+    gen1.next();
+    expect(gen1.next()).toBe("d2s-4");
+    expect(gen2.next()).toBe("d2s-5");
   });
 });
