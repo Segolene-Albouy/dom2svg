@@ -162,8 +162,10 @@ export async function renderHtmlElement(
   // Pseudo-elements (::before, ::after)
   await renderPseudoElement(element, "::before", rootElement, ctx, group);
 
-  // Overflow clipping — wrap children in a mask group
-  if (hasOverflowClip(styles)) {
+  // Overflow clipping — wrap children in a mask group.
+  // Skip for the root element: the SVG viewBox already provides boundary
+  // clipping, and a redundant mask can cause subpixel edge truncation.
+  if (hasOverflowClip(styles) && element !== rootElement) {
     const maskGroup = createOverflowMask(box, radii, ctx);
     group.appendChild(maskGroup);
     // The caller should append children to this maskGroup
