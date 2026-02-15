@@ -21,7 +21,7 @@ Real-world UI components (stat cards, avatars, alerts, buttons, progress bars, c
 ## Install
 
 ```bash
-npm install dom2svg
+npm install github:milanofthe/dom2svg
 ```
 
 ## Quick Start
@@ -138,7 +138,7 @@ const result = await domToSvg(element, {
   }
 </script>
 
-<button on:click={exportDiagram}>Export SVG</button>
+<button onclick={exportDiagram}>Export SVG</button>
 ```
 
 ### Export a React Flow editor
