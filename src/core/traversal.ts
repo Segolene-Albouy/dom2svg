@@ -4,7 +4,14 @@ import {
   isTextNode,
   isSvgElement,
 } from "../utils/dom.js";
-import { isInvisible } from "./styles.js";
+import {
+  isInvisible,
+  createsStackingContext,
+  getZIndex,
+  isPositioned,
+  isFloat,
+  isInlineLevel,
+} from "./styles.js";
 import { getRelativeBox } from "../utils/geometry.js";
 import {
   renderHtmlElement,
@@ -63,8 +70,9 @@ export async function walkElement(
     group.setAttribute("opacity", String(opacity));
   }
 
-  // Walk children in DOM order
-  for (const child of Array.from(element.childNodes)) {
+  // Walk children in CSS paint order (z-index / stacking context aware)
+  const sortedChildren = sortChildrenByPaintOrder(element);
+  for (const child of sortedChildren) {
     if (isTextNode(child)) {
       const textSvg = await renderTextNode(child, rootElement, ctx);
       if (textSvg) childTarget.appendChild(textSvg);
@@ -78,6 +86,74 @@ export async function walkElement(
   await renderPseudoAfter(element, rootElement, ctx, group);
 
   return group;
+}
+
+/**
+ * Sort child nodes into CSS paint order per CSS 2.2 Appendix E:
+ * 1. Stacking contexts with negative z-index (sorted ascending)
+ * 2. In-flow, non-positioned, block-level descendants (tree order)
+ * 3. Non-positioned floats (tree order)
+ * 4. In-flow, non-positioned, inline-level descendants + text nodes (tree order)
+ * 5. Positioned with z-index auto/0 + opacity/transform stacking contexts (tree order)
+ * 6. Stacking contexts with positive z-index (sorted ascending)
+ */
+function sortChildrenByPaintOrder(element: Element): Node[] {
+  const children = Array.from(element.childNodes);
+
+  // Fast path: no element children, just text nodes
+  if (!children.some((c) => isElement(c))) return children;
+
+  const negativeZIndex: { node: Element; z: number }[] = [];
+  const blocks: Node[] = [];
+  const floats: Element[] = [];
+  const inlinesAndText: Node[] = [];
+  const positioned: Element[] = [];
+  const positiveZIndex: { node: Element; z: number }[] = [];
+
+  for (const child of children) {
+    if (isTextNode(child)) {
+      inlinesAndText.push(child);
+      continue;
+    }
+
+    if (!isElement(child)) continue;
+
+    const childStyles = window.getComputedStyle(child);
+    const z = getZIndex(childStyles);
+    const hasStackingCtx = createsStackingContext(childStyles);
+    const pos = isPositioned(childStyles);
+
+    // Elements with explicit z-index that create stacking contexts
+    if (hasStackingCtx && z < 0) {
+      negativeZIndex.push({ node: child, z });
+    } else if (hasStackingCtx && z > 0) {
+      positiveZIndex.push({ node: child, z });
+    } else if (pos || hasStackingCtx) {
+      // Positioned with z-index auto/0, or non-positioned stacking contexts
+      positioned.push(child);
+    } else if (isFloat(childStyles)) {
+      floats.push(child);
+    } else if (isInlineLevel(childStyles)) {
+      inlinesAndText.push(child);
+    } else {
+      // Block-level, in-flow, non-positioned
+      blocks.push(child);
+    }
+  }
+
+  // Sort by z-index (ascending), stable within same z
+  negativeZIndex.sort((a, b) => a.z - b.z);
+  positiveZIndex.sort((a, b) => a.z - b.z);
+
+  const result: Node[] = [];
+  for (const { node } of negativeZIndex) result.push(node);
+  for (const node of blocks) result.push(node);
+  for (const node of floats) result.push(node);
+  for (const node of inlinesAndText) result.push(node);
+  for (const node of positioned) result.push(node);
+  for (const { node } of positiveZIndex) result.push(node);
+
+  return result;
 }
 
 /** Check if an element should be excluded */
