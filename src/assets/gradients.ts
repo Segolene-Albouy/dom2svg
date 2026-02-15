@@ -180,6 +180,8 @@ function rasterizeRadialGradient(
 
   let isCircle = false;
   let stopsStart = 0;
+  let customCx: number | null = null;
+  let customCy: number | null = null;
 
   // Check if the first part is a shape/size descriptor
   const first = parts[0]!.trim();
@@ -192,8 +194,18 @@ function rasterizeRadialGradient(
     stopsStart = 1;
   }
 
-  const cx = width / 2;
-  const cy = height / 2;
+  // Parse "at cx cy" position from shape descriptor
+  if (stopsStart === 1) {
+    const atMatch = first.match(/at\s+(.+)/);
+    if (atMatch) {
+      const posParts = atMatch[1]!.trim().split(/\s+/);
+      customCx = parseLengthOrPercent(posParts[0]!, width);
+      customCy = parseLengthOrPercent(posParts[1] ?? posParts[0]!, height);
+    }
+  }
+
+  const cx = customCx ?? width / 2;
+  const cy = customCy ?? height / 2;
 
   // Use transform to create an elliptical gradient
   const rx = width / 2;
@@ -315,4 +327,14 @@ function parseAngle(value: string): number {
   if (value.endsWith("turn")) return parseFloat(value) * 360;
   if (value.endsWith("grad")) return parseFloat(value) * 0.9;
   return parseFloat(value);
+}
+
+/** Parse a CSS length (px) or percentage relative to a container dimension */
+function parseLengthOrPercent(value: string, containerSize: number): number | null {
+  if (value === "center") return containerSize / 2;
+  if (value === "left" || value === "top") return 0;
+  if (value === "right" || value === "bottom") return containerSize;
+  if (value.endsWith("%")) return (parseFloat(value) / 100) * containerSize;
+  const num = parseFloat(value);
+  return isNaN(num) ? null : num;
 }

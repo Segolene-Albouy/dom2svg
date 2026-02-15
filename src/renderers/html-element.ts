@@ -427,11 +427,17 @@ function renderListMarker(
 
   const fontSize = parseFloat(styles.fontSize) || 16;
   const paddingLeft = parseFloat(styles.paddingLeft) || 0;
+  const paddingTop = parseFloat(styles.paddingTop) || 0;
+  const lineHeight = parseFloat(styles.lineHeight) || fontSize * 1.2;
+
+  // Marker sits to the left of the content box, vertically aligned with the first line
+  const markerX = box.x + paddingLeft - 6;
+  const markerY = box.y + paddingTop + (lineHeight - fontSize) / 2 + fontSize * 0.8;
 
   const textEl = createSvgElement(ctx.svgDocument, "text");
   setAttributes(textEl, {
-    x: (box.x - paddingLeft / 2).toFixed(2),
-    y: (box.y + fontSize * 0.8).toFixed(2),
+    x: markerX.toFixed(2),
+    y: markerY.toFixed(2),
     "font-family": styles.fontFamily,
     "font-size": styles.fontSize,
     fill: styles.color,
@@ -467,12 +473,17 @@ function renderFormContent(
 
   const fontSize = parseFloat(styles.fontSize) || 16;
   const paddingLeft = parseFloat(styles.paddingLeft) || 0;
-  const paddingTop = parseFloat(styles.paddingTop) || 0;
+  const borderTop = parseFloat(styles.borderTopWidth) || 0;
+  const borderBottom = parseFloat(styles.borderBottomWidth) || 0;
+
+  // Vertically center text within the control (inner height minus borders)
+  const innerHeight = box.height - borderTop - borderBottom;
+  const baselineY = box.y + borderTop + innerHeight / 2 + fontSize * 0.35;
 
   const textEl = createSvgElement(ctx.svgDocument, "text");
   setAttributes(textEl, {
     x: (box.x + paddingLeft).toFixed(2),
-    y: (box.y + paddingTop + fontSize * 0.8).toFixed(2),
+    y: baselineY.toFixed(2),
     "font-family": styles.fontFamily,
     "font-size": styles.fontSize,
     "font-weight": styles.fontWeight,
