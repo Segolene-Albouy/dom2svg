@@ -4,6 +4,16 @@ Convert DOM elements to clean, self-contained SVG files.
 
 Built for exporting node-based editors (SvelteFlow, React Flow, etc.) to vector graphics. Handles mixed HTML/SVG structures that existing libraries fail on.
 
+## Demo
+
+A node-based pipeline editor — DOM on the left, exported SVG on the right:
+
+![Pipeline editor export](media/demo-pipeline.png)
+
+24 CSS features rendered as DOM elements and their SVG counterparts:
+
+![Feature showcase](media/demo-features.png)
+
 ## Install
 
 ```bash
