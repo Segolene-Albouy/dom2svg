@@ -254,6 +254,13 @@ function createRoundedRectPath(
   return path;
 }
 
+/** Get SVG stroke-dasharray for a CSS border style */
+function borderDashArray(style: string, width: number): string | null {
+  if (style === "dashed") return `${width * 3} ${width * 2}`;
+  if (style === "dotted") return `${width} ${width}`;
+  return null;
+}
+
 /** Render borders as SVG rects (strokes) */
 function renderBorders(
   group: SVGGElement,
@@ -298,6 +305,8 @@ function renderBorders(
       stroke: borders.top.color,
       "stroke-width": borders.top.width,
     });
+    const dash = borderDashArray(borders.top.style, borders.top.width);
+    if (dash) shape.setAttribute("stroke-dasharray", dash);
 
     group.appendChild(shape);
     return;
@@ -316,6 +325,8 @@ function renderBorders(
       stroke: borders.top.color,
       "stroke-width": borders.top.width,
     });
+    const dash = borderDashArray(borders.top.style, borders.top.width);
+    if (dash) line.setAttribute("stroke-dasharray", dash);
     group.appendChild(line);
   }
 
@@ -329,6 +340,8 @@ function renderBorders(
       stroke: borders.right.color,
       "stroke-width": borders.right.width,
     });
+    const dash = borderDashArray(borders.right.style, borders.right.width);
+    if (dash) line.setAttribute("stroke-dasharray", dash);
     group.appendChild(line);
   }
 
@@ -342,6 +355,8 @@ function renderBorders(
       stroke: borders.bottom.color,
       "stroke-width": borders.bottom.width,
     });
+    const dash = borderDashArray(borders.bottom.style, borders.bottom.width);
+    if (dash) line.setAttribute("stroke-dasharray", dash);
     group.appendChild(line);
   }
 
@@ -355,6 +370,8 @@ function renderBorders(
       stroke: borders.left.color,
       "stroke-width": borders.left.width,
     });
+    const dash = borderDashArray(borders.left.style, borders.left.width);
+    if (dash) line.setAttribute("stroke-dasharray", dash);
     group.appendChild(line);
   }
 }

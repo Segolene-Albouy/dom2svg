@@ -96,6 +96,7 @@
       border-radius: 12px;
       position: relative;
       overflow: hidden;
+      flex-shrink: 0;
     }
 
     /* Grid dots background via SVG */
@@ -481,13 +482,14 @@
 
     /* ================= COMPLEX NODE EDITOR ================= */
     .pipeline-editor {
-      width: 720px;
-      height: 460px;
+      width: 600px;
+      height: 420px;
       background: #13111c;
       border-radius: 12px;
       position: relative;
       overflow: hidden;
       border: 1px solid #2a2640;
+      flex-shrink: 0;
     }
 
     /* Toolbar */
@@ -594,32 +596,32 @@
     }
 
     /* Node themes */
-    .pe-http { top: 20px; left: 20px; }
+    .pe-http { top: 16px; left: 16px; }
     .pe-http .pe-node-header { color: #60a5fa; }
     .pe-http .pe-node-icon { background: #3b82f6; }
     .pe-http .pe-port { border-color: #3b82f6; }
 
-    .pe-parse { top: 20px; left: 220px; }
+    .pe-parse { top: 16px; left: 190px; }
     .pe-parse .pe-node-header { color: #34d399; }
     .pe-parse .pe-node-icon { background: #10b981; }
     .pe-parse .pe-port { border-color: #10b981; }
 
-    .pe-filter { top: 160px; left: 20px; }
+    .pe-filter { top: 140px; left: 16px; }
     .pe-filter .pe-node-header { color: #fbbf24; }
     .pe-filter .pe-node-icon { background: #f59e0b; }
     .pe-filter .pe-port { border-color: #f59e0b; }
 
-    .pe-transform { top: 160px; left: 240px; }
+    .pe-transform { top: 140px; left: 200px; }
     .pe-transform .pe-node-header { color: #a78bfa; }
     .pe-transform .pe-node-icon { background: #8b5cf6; }
     .pe-transform .pe-port { border-color: #8b5cf6; }
 
-    .pe-aggregate { top: 160px; left: 460px; }
+    .pe-aggregate { top: 140px; left: 380px; }
     .pe-aggregate .pe-node-header { color: #f472b6; }
     .pe-aggregate .pe-node-icon { background: #ec4899; }
     .pe-aggregate .pe-port { border-color: #ec4899; }
 
-    .pe-database { top: 320px; left: 460px; }
+    .pe-database { top: 280px; left: 380px; }
     .pe-database .pe-node-header {
       color: #2dd4bf;
       background: linear-gradient(135deg, rgba(45, 212, 191, 0.08), transparent);
@@ -630,8 +632,8 @@
     /* Comment */
     .pe-comment {
       position: absolute;
-      top: 330px;
-      left: 30px;
+      top: 290px;
+      left: 20px;
       background: rgba(251, 191, 36, 0.08);
       border: 1px dashed rgba(251, 191, 36, 0.3);
       border-radius: 8px;
@@ -799,17 +801,17 @@
             <!-- Connections -->
             <svg class="pe-connections" xmlns="http://www.w3.org/2000/svg">
               <!-- HTTP → Parse -->
-              <path d="M 150 65 C 185 65, 185 65, 220 65" stroke="#3b82f6" stroke-width="1.5" fill="none" opacity="0.5" />
+              <path d="M 146 55 C 168 55, 168 55, 190 55" stroke="#3b82f6" stroke-width="1.5" fill="none" opacity="0.5" />
               <!-- Parse → Filter -->
-              <path d="M 150 85 C 180 85, 50 210, 20 210" stroke="#10b981" stroke-width="1.5" fill="none" opacity="0.5" />
+              <path d="M 190 75 C 140 75, 50 180, 16 180" stroke="#10b981" stroke-width="1.5" fill="none" opacity="0.5" />
               <!-- Parse → Transform -->
-              <path d="M 350 65 C 380 65, 260 200, 240 200" stroke="#10b981" stroke-width="1.5" fill="none" opacity="0.5" />
+              <path d="M 320 55 C 340 55, 220 175, 200 175" stroke="#10b981" stroke-width="1.5" fill="none" opacity="0.5" />
               <!-- Filter → Aggregate -->
-              <path d="M 150 240 C 300 240, 400 210, 460 210" stroke="#f59e0b" stroke-width="1.5" fill="none" opacity="0.5" />
+              <path d="M 146 210 C 260 210, 340 185, 380 185" stroke="#f59e0b" stroke-width="1.5" fill="none" opacity="0.5" />
               <!-- Transform → Aggregate -->
-              <path d="M 370 230 C 410 230, 430 210, 460 210" stroke="#8b5cf6" stroke-width="1.5" fill="none" opacity="0.5" />
+              <path d="M 330 200 C 350 200, 360 185, 380 185" stroke="#8b5cf6" stroke-width="1.5" fill="none" opacity="0.5" />
               <!-- Aggregate → Database -->
-              <path d="M 560 240 C 580 240, 580 340, 560 360" stroke="#ec4899" stroke-width="1.5" fill="none" opacity="0.5" />
+              <path d="M 470 210 C 485 210, 485 290, 470 310" stroke="#ec4899" stroke-width="1.5" fill="none" opacity="0.5" />
             </svg>
 
             <!-- HTTP Request Node -->
@@ -952,12 +954,12 @@
 
             <!-- Minimap -->
             <div class="pe-minimap">
-              <div class="pe-minimap-dot" style="width:14px;height:8px;background:#3b82f6;opacity:0.5;top:8px;left:5px;"></div>
-              <div class="pe-minimap-dot" style="width:14px;height:8px;background:#10b981;opacity:0.5;top:8px;left:30px;"></div>
-              <div class="pe-minimap-dot" style="width:14px;height:10px;background:#f59e0b;opacity:0.5;top:30px;left:5px;"></div>
-              <div class="pe-minimap-dot" style="width:14px;height:10px;background:#8b5cf6;opacity:0.5;top:30px;left:34px;"></div>
-              <div class="pe-minimap-dot" style="width:14px;height:10px;background:#ec4899;opacity:0.5;top:30px;left:63px;"></div>
-              <div class="pe-minimap-dot" style="width:14px;height:10px;background:#14b8a6;opacity:0.5;top:50px;left:63px;"></div>
+              <div class="pe-minimap-dot" style="width:12px;height:7px;background:#3b82f6;opacity:0.5;top:7px;left:5px;"></div>
+              <div class="pe-minimap-dot" style="width:12px;height:7px;background:#10b981;opacity:0.5;top:7px;left:28px;"></div>
+              <div class="pe-minimap-dot" style="width:12px;height:8px;background:#f59e0b;opacity:0.5;top:26px;left:5px;"></div>
+              <div class="pe-minimap-dot" style="width:12px;height:8px;background:#8b5cf6;opacity:0.5;top:26px;left:30px;"></div>
+              <div class="pe-minimap-dot" style="width:12px;height:8px;background:#ec4899;opacity:0.5;top:26px;left:58px;"></div>
+              <div class="pe-minimap-dot" style="width:12px;height:8px;background:#14b8a6;opacity:0.5;top:46px;left:58px;"></div>
             </div>
           </div>
         </div>
