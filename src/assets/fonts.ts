@@ -1,5 +1,7 @@
 import type { FontCache, FontMapping, FontConfig } from "../types.js";
 
+const FONT_TIMEOUT_MS = 10_000;
+
 /**
  * Create a font cache that loads and caches opentype.js Font objects.
  * Fonts are loaded on-demand from URLs provided in the font mapping.
@@ -47,7 +49,10 @@ export function createFontCache(mapping: FontMapping): FontCache {
       const opentype = await loadOpentype();
 
       try {
-        const response = await fetch(config.url);
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), FONT_TIMEOUT_MS);
+        const response = await fetch(config.url, { signal: controller.signal });
+        clearTimeout(timer);
         const buffer = await response.arrayBuffer();
         const font = opentype.parse(buffer);
         cache.set(key, font);
