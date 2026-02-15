@@ -2,11 +2,13 @@ import type {
   DomToSvgOptions,
   DomToSvgResult,
   RenderContext,
+  BorderRadii,
 } from "./types.js";
 import { SVG_NS, XMLNS_NS, createSvgElement, setAttributes } from "./utils/dom.js";
 import { createIdGenerator } from "./utils/id-generator.js";
 import { walkElement } from "./core/traversal.js";
 import { createFontCache } from "./assets/fonts.js";
+import { parseBorderRadii, clampRadii, hasRadius, hasOverflowClip } from "./core/styles.js";
 
 export type {
   DomToSvgOptions,
@@ -78,6 +80,20 @@ export async function domToSvg(
   // Walk the DOM tree and render
   const rootGroup = await walkElement(element, element, ctx);
   if (rootGroup) {
+    // Apply border-radius clipping at the SVG level for the root element.
+    // This is done here instead of in renderHtmlElement to avoid subpixel
+    // mask truncation issues that occur when the mask and viewBox compete.
+    const rootStyles = window.getComputedStyle(element);
+    const rootRadii = clampRadii(parseBorderRadii(rootStyles), rect.width, rect.height);
+    if (hasOverflowClip(rootStyles) && hasRadius(rootRadii)) {
+      const clipId = ctx.idGenerator.next("clip");
+      const clipPath = createSvgElement(svgDocument, "clipPath");
+      clipPath.setAttribute("id", clipId);
+      const clipShape = createRootClipShape(svgDocument, rect.width, rect.height, rootRadii);
+      clipPath.appendChild(clipShape);
+      defs.appendChild(clipPath);
+      rootGroup.setAttribute("clip-path", `url(#${clipId})`);
+    }
     svg.appendChild(rootGroup);
   }
 
@@ -87,6 +103,47 @@ export async function domToSvg(
   }
 
   return createResult(svg);
+}
+
+/** Create a rounded-rect shape for the root element's clipPath */
+function createRootClipShape(
+  doc: Document,
+  width: number,
+  height: number,
+  radii: BorderRadii,
+): SVGElement {
+  const [tlx, tly] = radii.topLeft;
+  const [trx, try_] = radii.topRight;
+  const [brx, bry] = radii.bottomRight;
+  const [blx, bly] = radii.bottomLeft;
+
+  const isUniform =
+    tlx === trx && trx === brx && brx === blx &&
+    tly === try_ && try_ === bry && bry === bly;
+
+  if (isUniform) {
+    const rect = createSvgElement(doc, "rect");
+    setAttributes(rect, { x: 0, y: 0, width, height, rx: tlx, ry: tly });
+    return rect;
+  }
+
+  // Non-uniform: build a path with arcs at each corner
+  const d = [
+    `M ${tlx} 0`,
+    `L ${width - trx} 0`,
+    trx || try_ ? `A ${trx} ${try_} 0 0 1 ${width} ${try_}` : "",
+    `L ${width} ${height - bry}`,
+    brx || bry ? `A ${brx} ${bry} 0 0 1 ${width - brx} ${height}` : "",
+    `L ${blx} ${height}`,
+    blx || bly ? `A ${blx} ${bly} 0 0 1 0 ${height - bly}` : "",
+    `L 0 ${tly}`,
+    tlx || tly ? `A ${tlx} ${tly} 0 0 1 ${tlx} 0` : "",
+    "Z",
+  ].filter(Boolean).join(" ");
+
+  const path = createSvgElement(doc, "path");
+  path.setAttribute("d", d);
+  return path;
 }
 
 function createResult(svg: SVGSVGElement): DomToSvgResult {
