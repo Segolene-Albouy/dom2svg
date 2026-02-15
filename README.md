@@ -14,7 +14,7 @@ Real-world UI components (stat cards, avatars, alerts, buttons, progress bars, c
 
 ![Real-world components](media/demo-components.png)
 
-24 CSS features rendered as DOM elements and their SVG counterparts:
+37 CSS features rendered as DOM elements and their SVG counterparts:
 
 ![Feature showcase](media/demo-features.png)
 
@@ -215,22 +215,32 @@ interface DomToSvgOptions {
 | Linear gradients | Full (correct diagonal angles on non-square elements) |
 | Radial gradients | Full (circle and ellipse, rasterized via Canvas) |
 | Conic gradients | Full (rasterized via Canvas) |
+| Multiple backgrounds | Full (layered in correct CSS order) |
+| Background size/position | Full (`contain`, `cover`, explicit sizes) |
 | Background images (`url()`) | Full (inlined as data URLs) |
 | Borders (uniform and per-side) | Full (solid, dashed, dotted) |
 | Border radius (uniform and non-uniform) | Full (including pill shapes) |
+| Box shadow | Full (outer and inset, multiple, spread, blur) |
+| Outline | Full (solid, dashed, dotted with offset) |
 | CSS transforms | Full (translate, rotate, scale, skew, matrix) |
 | Transform origin | Full |
 | Opacity | Full |
 | Overflow clipping | Full (`hidden`, `clip`, `scroll`, `auto`) |
+| `clip-path` | Full (`inset`, `circle`, `ellipse`, `polygon`, `path`) |
+| Z-index / stacking contexts | Full (CSS 2.2 paint order) |
 | Inline SVGs | Full (deep clone with ID namespacing) |
 | `<img>` elements | Full (inlined as data URLs) |
 | `<canvas>` elements | Full (via `toDataURL()`) |
+| Form elements | Full (`<input>`, `<select>`, `<textarea>` values and placeholders) |
 | Pseudo-elements (`::before`, `::after`) | Partial (text content) |
 | `drop-shadow()` filter | Full |
 | Text rendering | Full (`<text>` elements, or `<path>` with `textToPath`) |
+| Text shadow | Full (single and multiple, via SVG filters) |
 | Text decoration | Full (underline, line-through) |
 | Text transform | Full (uppercase, lowercase, capitalize) |
+| Text overflow (ellipsis) | Full (appends ellipsis character) |
 | Letter spacing | Full |
+| List markers | Full (disc, circle, square, decimal) |
 | `visibility: hidden` | Correctly skipped (children still rendered) |
 | `display: none` | Correctly skipped |
 
@@ -251,7 +261,10 @@ src/
 │   ├── images.ts         # Image/canvas → data URL inlining
 │   ├── fonts.ts          # Font loading + text-to-path (opentype.js)
 │   ├── gradients.ts      # CSS gradient → SVG gradient / rasterized image
-│   └── filters.ts        # drop-shadow → SVG filter
+│   ├── filters.ts        # drop-shadow → SVG filter
+│   ├── box-shadow.ts     # box-shadow → SVG filter / mask
+│   ├── clip-path.ts      # clip-path → SVG clipPath
+│   └── text-shadow.ts    # text-shadow → SVG filter
 ├── transforms/
 │   ├── parse.ts          # CSS transform string parsing
 │   ├── matrix.ts         # 2D affine matrix operations
@@ -270,7 +283,7 @@ Single runtime dependency: [opentype.js](https://github.com/opentypejs/opentype.
 npm install
 npm run build        # ESM + CJS bundles via tsup
 npm run type-check   # TypeScript strict mode
-npm run test         # 139 unit tests via Vitest
+npm run test         # 162 unit tests via Vitest
 npm run test:watch   # Watch mode
 npm run demo         # Visual demo at localhost:5173
 ```
