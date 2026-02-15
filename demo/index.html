@@ -481,6 +481,119 @@
       color: #64748b;
     }
 
+    /* ---- Row 7: New CSS features ---- */
+    .feat-box-shadow {
+      width: 80px;
+      height: 60px;
+      margin: 0 auto;
+      background: #1e293b;
+      border-radius: 10px;
+      box-shadow: 4px 4px 12px rgba(59, 130, 246, 0.5), -2px -2px 8px rgba(139, 92, 246, 0.3);
+    }
+    .feat-box-shadow-inset {
+      width: 80px;
+      height: 60px;
+      margin: 0 auto;
+      background: #1e293b;
+      border-radius: 10px;
+      box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.6), inset 0 -1px 4px rgba(255, 255, 255, 0.1);
+    }
+    .feat-clip-circle {
+      width: 80px;
+      height: 60px;
+      margin: 0 auto;
+      background: linear-gradient(135deg, #ec4899, #8b5cf6);
+      clip-path: circle(28px at 40px 30px);
+    }
+    .feat-clip-polygon {
+      width: 80px;
+      height: 60px;
+      margin: 0 auto;
+      background: linear-gradient(135deg, #f59e0b, #ef4444);
+      clip-path: polygon(40px 0px, 80px 60px, 0px 60px);
+    }
+    .feat-outline {
+      width: 64px;
+      height: 44px;
+      margin: 8px auto;
+      background: #1e293b;
+      border-radius: 8px;
+      border: 2px solid #3b82f6;
+      outline: 2px dashed #10b981;
+      outline-offset: 4px;
+    }
+    .feat-z-index {
+      width: 80px;
+      height: 60px;
+      margin: 0 auto;
+      position: relative;
+    }
+    .feat-z-index > div {
+      position: absolute;
+      width: 36px;
+      height: 36px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      font-weight: 700;
+      color: white;
+    }
+    .feat-ellipsis {
+      width: 80px;
+      margin: 0 auto;
+      font-size: 11px;
+      color: #e0e0e0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .feat-list {
+      width: 80px;
+      margin: 0 auto;
+      text-align: left;
+      padding-left: 20px;
+    }
+    .feat-list li {
+      font-size: 10px;
+      color: #e0e0e0;
+      line-height: 1.6;
+    }
+    .feat-form-input {
+      width: 80px;
+      margin: 0 auto;
+    }
+    .feat-form-input input {
+      width: 100%;
+      padding: 4px 6px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 4px;
+      color: #e0e0e0;
+      font-size: 10px;
+      margin-bottom: 4px;
+    }
+    .feat-form-input select {
+      width: 100%;
+      padding: 3px 4px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 4px;
+      color: #e0e0e0;
+      font-size: 10px;
+    }
+    .feat-multi-bg {
+      width: 80px;
+      height: 60px;
+      margin: 0 auto;
+      border-radius: 8px;
+      background:
+        radial-gradient(circle at 20px 20px, rgba(239, 68, 68, 0.6) 0%, transparent 40%),
+        radial-gradient(circle at 60px 40px, rgba(59, 130, 246, 0.6) 0%, transparent 40%),
+        linear-gradient(135deg, #1e1b4b, #312e81);
+    }
+
     /* ================= COMPLEX NODE EDITOR ================= */
     .pipeline-editor {
       width: 680px;
@@ -860,10 +973,7 @@
   <h2>Visual regression test — compare DOM (left) vs exported SVG (right)</h2>
 
   <div class="controls">
-    <button id="btn-export-editor">Export Node Editor</button>
-    <button id="btn-export-pipeline">Export Pipeline</button>
-    <button id="btn-export-grid">Export Feature Grid</button>
-    <button id="btn-export-all" class="secondary">Export All</button>
+    <button id="btn-export-all">Export All</button>
     <button id="btn-download" class="secondary" disabled>Download SVG</button>
     <label>
       <input type="checkbox" id="chk-background" />
@@ -1159,9 +1269,6 @@
 
   <!-- ===== REAL-WORLD COMPONENTS ===== -->
   <h3>Real-World Components</h3>
-  <div class="controls">
-    <button id="btn-export-components">Export Components</button>
-  </div>
   <div class="split">
     <div class="panel">
       <div class="panel-header">DOM Source</div>
@@ -1418,6 +1525,78 @@
             </div>
             <div class="label">Glass Overlay</div>
           </div>
+
+          <!-- Row 7: New features -->
+          <div class="feature-card">
+            <div class="feat-box-shadow"></div>
+            <div class="label">Box Shadow</div>
+          </div>
+          <div class="feature-card">
+            <div class="feat-box-shadow-inset"></div>
+            <div class="label">Inset Shadow</div>
+          </div>
+          <div class="feature-card">
+            <div class="feat-clip-circle"></div>
+            <div class="label">Clip Circle</div>
+          </div>
+          <div class="feature-card">
+            <div class="feat-clip-polygon"></div>
+            <div class="label">Clip Polygon</div>
+          </div>
+
+          <!-- Row 8 -->
+          <div class="feature-card">
+            <div class="feat-outline"></div>
+            <div class="label">Outline</div>
+          </div>
+          <div class="feature-card">
+            <div class="feat-z-index">
+              <div style="background:#ef4444;z-index:3;top:0;left:0;">z:3</div>
+              <div style="background:#3b82f6;z-index:1;top:12px;left:22px;">z:1</div>
+              <div style="background:#10b981;z-index:2;top:24px;left:44px;">z:2</div>
+            </div>
+            <div class="label">Z-Index Order</div>
+          </div>
+          <div class="feature-card">
+            <div class="feat-ellipsis">This text is way too long to fit</div>
+            <div class="label">Text Ellipsis</div>
+          </div>
+          <div class="feature-card">
+            <div class="feat-multi-bg"></div>
+            <div class="label">Multi Background</div>
+          </div>
+
+          <!-- Row 9 -->
+          <div class="feature-card">
+            <div class="feat-list">
+              <ul>
+                <li>Alpha</li>
+                <li>Bravo</li>
+                <li>Charlie</li>
+              </ul>
+            </div>
+            <div class="label">List Markers</div>
+          </div>
+          <div class="feature-card">
+            <div class="feat-form-input">
+              <input type="text" value="Hello world" />
+              <select><option>Option A</option><option>Option B</option></select>
+            </div>
+            <div class="label">Form Elements</div>
+          </div>
+          <div class="feature-card">
+            <div class="feat-form-input">
+              <input type="text" placeholder="Placeholder..." />
+            </div>
+            <div class="label">Placeholder</div>
+          </div>
+          <div class="feature-card">
+            <div class="feat-z-index">
+              <div style="background:#8b5cf6;z-index:-1;top:12px;left:22px;width:56px;height:36px;">behind</div>
+              <div style="background:#1e293b;border:2px solid #6366f1;top:0;left:0;width:50px;height:50px;">front</div>
+            </div>
+            <div class="label">Negative Z</div>
+          </div>
         </div>
       </div>
     </div>
@@ -1433,10 +1612,6 @@
     import { domToSvg } from "../src/index.ts";
 
     const status = document.getElementById("status");
-    const btnEditor = document.getElementById("btn-export-editor");
-    const btnPipeline = document.getElementById("btn-export-pipeline");
-    const btnComponents = document.getElementById("btn-export-components");
-    const btnGrid = document.getElementById("btn-export-grid");
     const btnAll = document.getElementById("btn-export-all");
     const btnDownload = document.getElementById("btn-download");
     const chkBg = document.getElementById("chk-background");
@@ -1454,13 +1629,8 @@
       const el = document.getElementById(elementId);
       const out = document.getElementById(outputId);
 
-      status.textContent = "Exporting…";
-      const t0 = performance.now();
-
       try {
         const result = await domToSvg(el, getOpts());
-        const ms = (performance.now() - t0).toFixed(0);
-        status.textContent = `Done in ${ms}ms`;
 
         out.innerHTML = "";
         const wrapper = document.createElement("div");
@@ -1471,22 +1641,26 @@
         out.appendChild(svg);
 
         lastResult = result;
-        btnDownload.disabled = false;
       } catch (err) {
-        status.textContent = "Error — see console";
         console.error("dom2svg error:", err);
+        throw err;
       }
     }
 
-    btnEditor.addEventListener("click", () => exportElement("node-editor", "editor-output"));
-    btnPipeline.addEventListener("click", () => exportElement("pipeline-editor", "pipeline-output"));
-    btnComponents.addEventListener("click", () => exportElement("rw-components", "components-output"));
-    btnGrid.addEventListener("click", () => exportElement("feature-grid", "grid-output"));
     btnAll.addEventListener("click", async () => {
-      await exportElement("node-editor", "editor-output");
-      await exportElement("pipeline-editor", "pipeline-output");
-      await exportElement("rw-components", "components-output");
-      await exportElement("feature-grid", "grid-output");
+      status.textContent = "Exporting…";
+      const t0 = performance.now();
+      try {
+        await exportElement("node-editor", "editor-output");
+        await exportElement("pipeline-editor", "pipeline-output");
+        await exportElement("rw-components", "components-output");
+        await exportElement("feature-grid", "grid-output");
+        const ms = (performance.now() - t0).toFixed(0);
+        status.textContent = `Done in ${ms}ms`;
+        btnDownload.disabled = false;
+      } catch {
+        status.textContent = "Error — see console";
+      }
     });
     btnDownload.addEventListener("click", () => {
       if (lastResult) lastResult.download("dom2svg-demo.svg");
