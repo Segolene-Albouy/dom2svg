@@ -23,6 +23,7 @@ import { parseLinearGradient, createSvgLinearGradient, rasterizeGradient } from 
 import { imageToDataUrl, extractUrlFromCss, canvasToDataUrl } from "../assets/images.js";
 import { cssTransformToSvg } from "../transforms/svg.js";
 import { createDropShadowFilter } from "../assets/filters.js";
+import { parseBoxShadows, renderBoxShadows } from "../assets/box-shadow.js";
 
 /**
  * Render an HTML element's visual properties (background, borders, overflow mask).
@@ -61,6 +62,15 @@ export async function renderHtmlElement(
       const filterId = createDropShadowFilter(styles.filter, ctx);
       if (filterId) {
         group.setAttribute("filter", `url(#${filterId})`);
+      }
+    }
+
+    // Box shadows (rendered behind content)
+    const boxShadowValue = styles.boxShadow;
+    if (boxShadowValue && boxShadowValue !== "none") {
+      const shadows = parseBoxShadows(boxShadowValue);
+      if (shadows.length > 0) {
+        renderBoxShadows(shadows, box, radii, ctx, group);
       }
     }
 
