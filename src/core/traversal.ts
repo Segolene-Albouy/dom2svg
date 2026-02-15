@@ -66,7 +66,7 @@ export async function walkElement(
   // Walk children in DOM order
   for (const child of Array.from(element.childNodes)) {
     if (isTextNode(child)) {
-      const textSvg = renderTextNode(child, rootElement, ctx);
+      const textSvg = await renderTextNode(child, rootElement, ctx);
       if (textSvg) childTarget.appendChild(textSvg);
     } else if (isElement(child)) {
       const childSvg = await walkElement(child, rootElement, ctx);

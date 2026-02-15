@@ -1,15 +1,17 @@
 import type { RenderContext } from "../types.js";
 import { createSvgElement, setAttributes } from "../utils/dom.js";
+import { textToPath, cleanFontFamily } from "../assets/fonts.js";
 
 /**
- * Render a DOM Text node as SVG <text> elements.
+ * Render a DOM Text node as SVG <text> or <path> elements.
  * Uses Range API to get precise per-line positioning.
+ * When textToPath is enabled and a font is available, renders as <path>.
  */
-export function renderTextNode(
+export async function renderTextNode(
   textNode: Text,
   rootElement: Element,
   ctx: RenderContext,
-): SVGElement | null {
+): Promise<SVGElement | null> {
   const text = textNode.textContent;
   if (!text || !text.trim()) return null;
 
@@ -27,21 +29,43 @@ export function renderTextNode(
   if (rects.length === 0) return null;
 
   const group = createSvgElement(ctx.svgDocument, "g");
-
-  // Split text content to map to rects for multi-line text
   const lines = getTextLines(textNode, rootRect);
 
+  // Determine if we should use path mode
+  const usePathMode = ctx.options.textToPath && ctx.fontCache;
+  const fontFamily = cleanFontFamily(styles.fontFamily);
+  const fontSize = parseFloat(styles.fontSize) || 16;
+  const fontWeight = styles.fontWeight;
+  const fontStyle = styles.fontStyle;
+
+  let font: any = null;
+  if (usePathMode && ctx.fontCache?.has(fontFamily)) {
+    font = await ctx.fontCache.getFont(fontFamily, fontWeight, fontStyle);
+  }
+
   for (const line of lines) {
-    const textEl = createSvgElement(ctx.svgDocument, "text");
-
-    setAttributes(textEl, {
-      x: line.x.toFixed(2),
-      y: line.y.toFixed(2),
-    });
-
-    applyTextStyles(textEl, styles);
-    textEl.textContent = line.text;
-    group.appendChild(textEl);
+    if (font) {
+      // Path mode: convert text to <path>
+      const pathData = textToPath(font, line.text, line.x, line.y, fontSize);
+      if (pathData) {
+        const pathEl = createSvgElement(ctx.svgDocument, "path");
+        setAttributes(pathEl, {
+          d: pathData,
+          fill: styles.color,
+        });
+        group.appendChild(pathEl);
+      }
+    } else {
+      // Text mode: use <text> elements
+      const textEl = createSvgElement(ctx.svgDocument, "text");
+      setAttributes(textEl, {
+        x: line.x.toFixed(2),
+        y: line.y.toFixed(2),
+      });
+      applyTextStyles(textEl, styles);
+      textEl.textContent = line.text;
+      group.appendChild(textEl);
+    }
   }
 
   return group.childNodes.length > 0 ? group : null;
@@ -72,7 +96,6 @@ function getTextLines(textNode: Text, rootRect: DOMRect): TextLine[] {
   if (rects.length === 0) return lines;
 
   if (rects.length === 1) {
-    // Single line
     const rect = rects[0]!;
     lines.push({
       text,
@@ -98,7 +121,6 @@ function getTextLines(textNode: Text, rootRect: DOMRect): TextLine[] {
       currentRect = charRect;
       currentLine = text[i]!;
     } else if (Math.abs(charRect.top - currentRect.top) > fontSize * 0.5) {
-      // New line detected
       lines.push({
         text: currentLine,
         x: currentRect.left - rootRect.left,
@@ -111,7 +133,6 @@ function getTextLines(textNode: Text, rootRect: DOMRect): TextLine[] {
     }
   }
 
-  // Push last line
   if (currentLine && currentRect) {
     lines.push({
       text: currentLine,

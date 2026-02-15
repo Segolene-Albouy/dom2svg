@@ -5,8 +5,8 @@ import type {
 } from "./types.js";
 import { SVG_NS, XMLNS_NS, createSvgElement, setAttributes } from "./utils/dom.js";
 import { createIdGenerator } from "./utils/id-generator.js";
-import { expandBox } from "./utils/geometry.js";
 import { walkElement } from "./core/traversal.js";
+import { createFontCache } from "./assets/fonts.js";
 
 export type {
   DomToSvgOptions,
@@ -69,6 +69,11 @@ export async function domToSvg(
     options,
     opacity: 1,
   };
+
+  // Initialize font cache if textToPath is enabled
+  if (options.textToPath && options.fonts) {
+    ctx.fontCache = createFontCache(options.fonts);
+  }
 
   // Walk the DOM tree and render
   const rootGroup = await walkElement(element, element, ctx);
