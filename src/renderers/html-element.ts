@@ -10,6 +10,7 @@ import { getRelativeBox } from "../utils/geometry.js";
 import {
   parseBorders,
   parseBorderRadii,
+  clampRadii,
   hasBorder,
   hasRadius,
   isUniformRadius,
@@ -17,7 +18,7 @@ import {
   parseBackgroundColor,
   hasBackgroundImage,
 } from "../core/styles.js";
-import { parseLinearGradient, createSvgLinearGradient } from "../assets/gradients.js";
+import { parseLinearGradient, createSvgLinearGradient, rasterizeGradient } from "../assets/gradients.js";
 import { imageToDataUrl, extractUrlFromCss, canvasToDataUrl } from "../assets/images.js";
 import { cssTransformToSvg } from "../transforms/svg.js";
 import { createDropShadowFilter } from "../assets/filters.js";
@@ -35,7 +36,7 @@ export async function renderHtmlElement(
   const group = createSvgElement(ctx.svgDocument, "g") as SVGGElement;
   const styles = window.getComputedStyle(element);
   const box = getRelativeBox(element, rootElement);
-  const radii = parseBorderRadii(styles);
+  const radii = clampRadii(parseBorderRadii(styles), box.width, box.height);
 
   // CSS Transforms
   if (styles.transform && styles.transform !== "none") {
@@ -75,8 +76,27 @@ export async function renderHtmlElement(
       rect.setAttribute("fill", `url(#${gradientEl.getAttribute("id")})`);
       group.appendChild(rect);
     } else {
+      // Conic / radial gradient — rasterize via Canvas 2D API
+      const rasterized = rasterizeGradient(bgImage, box.width, box.height);
+      if (rasterized) {
+        const imgEl = createSvgElement(ctx.svgDocument, "image");
+        setAttributes(imgEl, {
+          x: box.x,
+          y: box.y,
+          width: box.width,
+          height: box.height,
+          href: rasterized,
+          preserveAspectRatio: "none",
+        });
+        if (hasRadius(radii)) {
+          applyClipMask(imgEl, box, radii, ctx, group);
+        } else {
+          group.appendChild(imgEl);
+        }
+      }
+
       // Background image URL
-      const url = extractUrlFromCss(bgImage);
+      const url = !rasterized ? extractUrlFromCss(bgImage) : null;
       if (url) {
         const dataUrl = await imageToDataUrl(url);
         const imgEl = createSvgElement(ctx.svgDocument, "image");

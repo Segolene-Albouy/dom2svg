@@ -172,6 +172,34 @@ export function isFloat(styles: CSSStyleDeclaration): boolean {
   return styles.cssFloat !== "none" && styles.cssFloat !== "";
 }
 
+/**
+ * Clamp border-radii to fit the box, following the CSS spec algorithm:
+ * compute the ratio for each side, use the minimum to scale all radii.
+ */
+export function clampRadii(radii: BorderRadii, width: number, height: number): BorderRadii {
+  // Horizontal sums (top and bottom edges)
+  const topH = radii.topLeft[0] + radii.topRight[0];
+  const bottomH = radii.bottomLeft[0] + radii.bottomRight[0];
+  // Vertical sums (left and right edges)
+  const leftV = radii.topLeft[1] + radii.bottomLeft[1];
+  const rightV = radii.topRight[1] + radii.bottomRight[1];
+
+  let f = 1;
+  if (topH > 0) f = Math.min(f, width / topH);
+  if (bottomH > 0) f = Math.min(f, width / bottomH);
+  if (leftV > 0) f = Math.min(f, height / leftV);
+  if (rightV > 0) f = Math.min(f, height / rightV);
+
+  if (f >= 1) return radii;
+
+  return {
+    topLeft: [radii.topLeft[0] * f, radii.topLeft[1] * f],
+    topRight: [radii.topRight[0] * f, radii.topRight[1] * f],
+    bottomRight: [radii.bottomRight[0] * f, radii.bottomRight[1] * f],
+    bottomLeft: [radii.bottomLeft[0] * f, radii.bottomLeft[1] * f],
+  };
+}
+
 /** Check if element is inline-level */
 export function isInlineLevel(styles: CSSStyleDeclaration): boolean {
   const d = styles.display;

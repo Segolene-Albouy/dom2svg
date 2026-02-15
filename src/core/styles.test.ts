@@ -15,6 +15,7 @@ import {
   isPositioned,
   isFloat,
   isInlineLevel,
+  clampRadii,
 } from "./styles.js";
 
 // Helper to create a mock CSSStyleDeclaration-like object
@@ -396,5 +397,58 @@ describe("isInlineLevel", () => {
 
   it("returns false for flex", () => {
     expect(isInlineLevel(mockStyles({ display: "flex" }))).toBe(false);
+  });
+});
+
+describe("clampRadii", () => {
+  it("returns unchanged radii when they fit the box", () => {
+    const radii = {
+      topLeft: [10, 10] as [number, number],
+      topRight: [10, 10] as [number, number],
+      bottomRight: [10, 10] as [number, number],
+      bottomLeft: [10, 10] as [number, number],
+    };
+    const result = clampRadii(radii, 100, 100);
+    expect(result).toBe(radii); // same reference — unchanged
+  });
+
+  it("clamps pill-shape radii (999px) to half the short side", () => {
+    const radii = {
+      topLeft: [999, 999] as [number, number],
+      topRight: [999, 999] as [number, number],
+      bottomRight: [999, 999] as [number, number],
+      bottomLeft: [999, 999] as [number, number],
+    };
+    const result = clampRadii(radii, 70, 28);
+    // f = min(70/(999+999), 28/(999+999)) = 28/1998 ≈ 0.01401
+    // All radii = 999 * 28/1998 = 14
+    expect(result.topLeft[0]).toBeCloseTo(14, 0);
+    expect(result.topLeft[1]).toBeCloseTo(14, 0);
+    // rx and ry should be equal (pill shape, not ellipse)
+    expect(result.topLeft[0]).toEqual(result.topLeft[1]);
+  });
+
+  it("clamps non-uniform radii proportionally", () => {
+    const radii = {
+      topLeft: [40, 40] as [number, number],
+      topRight: [40, 40] as [number, number],
+      bottomRight: [40, 40] as [number, number],
+      bottomLeft: [40, 40] as [number, number],
+    };
+    // width=60: topLeft.rx + topRight.rx = 80 > 60, f = 60/80 = 0.75
+    const result = clampRadii(radii, 60, 200);
+    expect(result.topLeft[0]).toBeCloseTo(30, 1);
+    expect(result.topLeft[1]).toBeCloseTo(30, 1);
+  });
+
+  it("handles zero-size radii without division errors", () => {
+    const radii = {
+      topLeft: [0, 0] as [number, number],
+      topRight: [0, 0] as [number, number],
+      bottomRight: [0, 0] as [number, number],
+      bottomLeft: [0, 0] as [number, number],
+    };
+    const result = clampRadii(radii, 50, 50);
+    expect(result).toBe(radii);
   });
 });
