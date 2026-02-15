@@ -19,6 +19,7 @@ import {
 } from "../core/styles.js";
 import { parseLinearGradient, createSvgLinearGradient } from "../assets/gradients.js";
 import { imageToDataUrl, extractUrlFromCss, canvasToDataUrl } from "../assets/images.js";
+import { cssTransformToSvg } from "../transforms/svg.js";
 
 /**
  * Render an HTML element's visual properties (background, borders, overflow mask).
@@ -34,6 +35,18 @@ export async function renderHtmlElement(
   const styles = window.getComputedStyle(element);
   const box = getRelativeBox(element, rootElement);
   const radii = parseBorderRadii(styles);
+
+  // CSS Transforms
+  if (styles.transform && styles.transform !== "none") {
+    const svgTransform = cssTransformToSvg(
+      styles.transform,
+      styles.transformOrigin,
+      box,
+    );
+    if (svgTransform) {
+      group.setAttribute("transform", svgTransform);
+    }
+  }
 
   // Background color
   const bgColor = parseBackgroundColor(styles);
