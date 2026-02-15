@@ -221,7 +221,15 @@ function rasterizeRadialGradient(
   }
 
   ctx.fillStyle = gradient;
-  ctx.fillRect(0, 0, width, height);
+  // When the elliptical transform compresses one axis, the fillRect must
+  // be expanded in the transformed space to cover the full canvas.
+  if (!isCircle && rx !== ry) {
+    const sx = radius / rx;
+    const sy = radius / ry;
+    ctx.fillRect(cx * (1 - sx), cy * (1 - sy), width * sx, height * sy);
+  } else {
+    ctx.fillRect(0, 0, width, height);
+  }
   ctx.restore();
 
   return canvas.toDataURL("image/png");
