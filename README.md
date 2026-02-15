@@ -1,8 +1,8 @@
 # dom2svg
 
-Convert DOM elements (hybrid HTML/SVG) to clean, self-contained SVG files.
+Convert DOM elements to clean, self-contained SVG files.
 
-Built for exporting node-based editors (SvelteFlow, React Flow, etc.) to vector graphics. Handles mixed HTML/SVG structures that existing libraries (dom-to-svg, html2canvas, html-to-image) fail on.
+Built for exporting node-based editors (SvelteFlow, React Flow, etc.) to vector graphics. Handles mixed HTML/SVG structures that existing libraries fail on.
 
 ## Install
 
@@ -20,54 +20,11 @@ const result = await domToSvg(element);
 
 // Download as .svg file
 result.download("export.svg");
-
-// Or get the SVG string
-const svgString = result.toString();
-
-// Or get a Blob for upload
-const blob = result.toBlob();
-```
-
-## API
-
-### `domToSvg(element, options?)`
-
-Converts a DOM element tree into a self-contained SVG.
-
-Returns `Promise<DomToSvgResult>` with:
-
-- **`svg`** — The generated `SVGSVGElement`
-- **`toString()`** — Serialized SVG string with XML declaration
-- **`toBlob()`** — SVG as a `Blob` (`image/svg+xml`)
-- **`download(filename?)`** — Triggers a browser download (default: `"export.svg"`)
-
-### Options
-
-```ts
-interface DomToSvgOptions {
-  // Font mapping for text-to-path conversion
-  fonts?: Record<string, string | { url: string; weight?: string; style?: string }>;
-
-  // Exclude elements by CSS selector or predicate
-  exclude?: string | ((element: Element) => boolean);
-
-  // Custom element handler — return SVGElement to override, null to use default
-  handler?: (element: Element, context: RenderContext) => SVGElement | null;
-
-  // Background color (default: transparent)
-  background?: string;
-
-  // Padding around the captured area in px (default: 0)
-  padding?: number;
-
-  // Convert text to <path> via opentype.js (default: false)
-  textToPath?: boolean;
-}
 ```
 
 ## Examples
 
-### Basic export with background
+### Export with white background and padding
 
 ```ts
 const result = await domToSvg(element, {
@@ -76,23 +33,49 @@ const result = await domToSvg(element, {
 });
 ```
 
-### Exclude UI controls from export
+### Download or get the SVG as a string/blob
 
 ```ts
+const result = await domToSvg(element);
+
+// Trigger browser download
+result.download("diagram.svg");
+
+// Get SVG markup (e.g. for saving to a server)
+const svgString = result.toString();
+
+// Get a Blob (e.g. for FormData upload)
+const blob = result.toBlob();
+```
+
+### Exclude elements from export
+
+```ts
+// By CSS selector
 const result = await domToSvg(element, {
   exclude: ".toolbar, .minimap, [data-no-export]",
+});
+
+// By predicate
+const result = await domToSvg(element, {
+  exclude: (el) => el.tagName === "BUTTON",
 });
 ```
 
 ### Text-to-path (font-independent output)
 
+Convert text to `<path>` elements so the SVG renders identically without any fonts installed. Requires [opentype.js](https://github.com/opentypejs/opentype.js) (bundled dependency).
+
 ```ts
 const result = await domToSvg(element, {
   textToPath: true,
   fonts: {
-    "Inter": "https://example.com/fonts/Inter-Regular.woff2",
-    "Fira Code": {
-      url: "https://example.com/fonts/FiraCode-Bold.woff2",
+    // Simple: family → URL
+    "Inter": "/fonts/Inter-Regular.woff2",
+
+    // Detailed: family → config with weight/style
+    "Inter": {
+      url: "/fonts/Inter-Bold.woff2",
       weight: "700",
       style: "normal",
     },
@@ -102,70 +85,170 @@ const result = await domToSvg(element, {
 
 ### Custom element handler
 
+Override rendering for specific elements:
+
 ```ts
 const result = await domToSvg(element, {
   handler: (el, ctx) => {
-    if (el.classList.contains("custom-widget")) {
-      const rect = ctx.svgDocument.createElementNS("http://www.w3.org/2000/svg", "rect");
-      // ... build custom SVG representation
-      return rect;
+    // Replace a placeholder with a custom SVG shape
+    if (el.classList.contains("chart-placeholder")) {
+      const circle = ctx.svgDocument.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "circle",
+      );
+      circle.setAttribute("cx", "50");
+      circle.setAttribute("cy", "50");
+      circle.setAttribute("r", "40");
+      circle.setAttribute("fill", "#3b82f6");
+      return circle;
     }
     return null; // fall through to default rendering
   },
 });
 ```
 
-## What it Renders
+### Export a SvelteFlow editor
+
+```svelte
+<script>
+  import { domToSvg } from "dom2svg";
+
+  async function exportDiagram() {
+    const editor = document.querySelector(".svelte-flow");
+    const result = await domToSvg(editor, {
+      background: "#ffffff",
+      padding: 24,
+      exclude: ".svelte-flow__controls, .svelte-flow__minimap",
+    });
+    result.download("diagram.svg");
+  }
+</script>
+
+<button on:click={exportDiagram}>Export SVG</button>
+```
+
+### Export a React Flow editor
+
+```tsx
+import { domToSvg } from "dom2svg";
+
+function ExportButton() {
+  const handleExport = async () => {
+    const editor = document.querySelector(".react-flow");
+    const result = await domToSvg(editor, {
+      background: "#ffffff",
+      padding: 24,
+      exclude: ".react-flow__controls, .react-flow__minimap",
+    });
+    result.download("flowchart.svg");
+  };
+
+  return <button onClick={handleExport}>Export SVG</button>;
+}
+```
+
+## API
+
+### `domToSvg(element, options?)`
+
+Converts a DOM element tree into a self-contained SVG.
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `element` | `Element` | The root DOM element to convert |
+| `options` | `DomToSvgOptions` | Optional configuration (see below) |
+
+**Returns:** `Promise<DomToSvgResult>`
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `svg` | `SVGSVGElement` | The generated SVG element |
+| `toString()` | `string` | Serialized SVG with XML declaration |
+| `toBlob()` | `Blob` | SVG as `image/svg+xml` blob |
+| `download(filename?)` | `void` | Triggers browser download |
+
+### Options
+
+```ts
+interface DomToSvgOptions {
+  /** Background color for the SVG (default: transparent) */
+  background?: string;
+
+  /** Padding around the captured area in px (default: 0) */
+  padding?: number;
+
+  /** CSS selector or predicate to exclude elements */
+  exclude?: string | ((element: Element) => boolean);
+
+  /** Convert text to <path> elements using opentype.js (default: false) */
+  textToPath?: boolean;
+
+  /** Font mapping for text-to-path (family name → URL or config) */
+  fonts?: Record<string, string | { url: string; weight?: string; style?: string }>;
+
+  /** Custom element handler — return SVGElement to override, null for default */
+  handler?: (element: Element, context: RenderContext) => SVGElement | null;
+}
+```
+
+## Supported CSS Features
 
 | Feature | Support |
 |---------|---------|
-| Background colors | Yes |
-| Linear gradients | Yes |
-| Background images | Yes (inlined as data URLs) |
-| Borders (uniform & per-side) | Yes |
-| Border radius (uniform & non-uniform) | Yes |
-| CSS transforms (translate, scale, rotate, skew) | Yes |
-| Transform origin | Yes |
-| Opacity | Yes |
-| Overflow clipping | Yes (via `<mask>` for Figma compat) |
-| Inline SVGs | Yes (deep clone with ID namespacing) |
-| `<img>` elements | Yes (inlined as data URLs) |
-| `<canvas>` elements | Yes (via `toDataURL()`) |
-| Pseudo-elements (`::before`, `::after`) | Yes |
-| `drop-shadow()` filter | Yes |
-| Text | Yes (`<text>` or `<path>` via opentype.js) |
-| `display: none` / `visibility: hidden` | Auto-skipped |
+| Background colors | Full |
+| Linear gradients | Full (correct diagonal angles on non-square elements) |
+| Radial gradients | Full (circle and ellipse, rasterized via Canvas) |
+| Conic gradients | Full (rasterized via Canvas) |
+| Background images (`url()`) | Full (inlined as data URLs) |
+| Borders (uniform and per-side) | Full (solid, dashed, dotted) |
+| Border radius (uniform and non-uniform) | Full (including pill shapes) |
+| CSS transforms | Full (translate, rotate, scale, skew, matrix) |
+| Transform origin | Full |
+| Opacity | Full |
+| Overflow clipping | Full (`hidden`, `clip`, `scroll`, `auto`) |
+| Inline SVGs | Full (deep clone with ID namespacing) |
+| `<img>` elements | Full (inlined as data URLs) |
+| `<canvas>` elements | Full (via `toDataURL()`) |
+| Pseudo-elements (`::before`, `::after`) | Partial (text content) |
+| `drop-shadow()` filter | Full |
+| Text rendering | Full (`<text>` elements, or `<path>` with `textToPath`) |
+| Text decoration | Full (underline, line-through) |
+| Text transform | Full (uppercase, lowercase, capitalize) |
+| Letter spacing | Full |
+| `visibility: hidden` | Correctly skipped (children still rendered) |
+| `display: none` | Correctly skipped |
 
 ## Architecture
 
 ```
 src/
-├── index.ts                  # domToSvg() entry point
-├── types.ts                  # All TypeScript interfaces
+├── index.ts              # domToSvg() entry point
+├── types.ts              # All TypeScript interfaces
 ├── core/
-│   ├── traversal.ts          # DOM tree walking
-│   ├── stacking.ts           # CSS 2.1 stacking context (7-layer)
-│   └── styles.ts             # CSS property parsing
+│   ├── traversal.ts      # DOM tree walking
+│   └── styles.ts         # CSS property parsing
 ├── renderers/
-│   ├── html-element.ts       # HTML → SVG (bg, borders, overflow, pseudo)
-│   ├── svg-element.ts        # SVG cloning with ID namespacing
-│   └── text-node.ts          # Text → <text> or <path>
+│   ├── html-element.ts   # HTML → SVG (backgrounds, borders, overflow, pseudo)
+│   ├── svg-element.ts    # SVG cloning with ID namespacing
+│   └── text-node.ts      # Text → <text> or <path>
 ├── assets/
-│   ├── images.ts             # Image → data URL inlining
-│   ├── fonts.ts              # Font loading + text-to-path (opentype.js)
-│   ├── gradients.ts          # CSS gradient → SVG gradient
-│   └── filters.ts            # drop-shadow → SVG filter
+│   ├── images.ts         # Image/canvas → data URL inlining
+│   ├── fonts.ts          # Font loading + text-to-path (opentype.js)
+│   ├── gradients.ts      # CSS gradient → SVG gradient / rasterized image
+│   └── filters.ts        # drop-shadow → SVG filter
 ├── transforms/
-│   ├── parse.ts              # CSS transform string parsing
-│   ├── matrix.ts             # 2D affine matrix operations
-│   └── svg.ts                # CSS transform → SVG transform attribute
+│   ├── parse.ts          # CSS transform string parsing
+│   ├── matrix.ts         # 2D affine matrix operations
+│   └── svg.ts            # CSS transform → SVG transform attribute
 └── utils/
-    ├── dom.ts                # DOM type guards, SVG namespace helpers
-    ├── id-generator.ts       # Unique ID generation
-    └── geometry.ts           # Bounding box utilities
+    ├── dom.ts            # SVG namespace helpers, DOM type guards
+    ├── id-generator.ts   # Unique ID generation
+    └── geometry.ts       # Bounding box and rounded-rect path utilities
 ```
 
-Single runtime dependency: [opentype.js](https://github.com/opentypejs/opentype.js) (only loaded when `textToPath` is enabled).
+Single runtime dependency: [opentype.js](https://github.com/opentypejs/opentype.js) (only used when `textToPath` is enabled).
 
 ## Development
 
@@ -173,8 +256,9 @@ Single runtime dependency: [opentype.js](https://github.com/opentypejs/opentype.
 npm install
 npm run build        # ESM + CJS bundles via tsup
 npm run type-check   # TypeScript strict mode
-npm run test         # 143 unit tests via Vitest
+npm run test         # 139 unit tests via Vitest
 npm run test:watch   # Watch mode
+npm run demo         # Visual demo at localhost:5173
 ```
 
 ## License
