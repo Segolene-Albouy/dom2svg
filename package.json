@@ -13,8 +13,12 @@
       "require": "./dist/index.cjs"
     }
   },
+  "bin": {
+    "dom2svg": "./bin/dom2svg.mjs"
+  },
   "files": [
-    "dist"
+    "dist",
+    "bin"
   ],
   "scripts": {
     "build": "tsup",
