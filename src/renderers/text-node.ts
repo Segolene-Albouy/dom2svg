@@ -43,10 +43,13 @@ export async function renderTextNode(
     font = await ctx.fontCache.getFont(fontFamily, fontWeight, fontStyle);
   }
 
+  const textTransform = styles.textTransform;
+
   for (const line of lines) {
+    const displayText = applyTextTransform(line.text, textTransform);
     if (font) {
       // Path mode: convert text to <path>
-      const pathData = textToPath(font, line.text, line.x, line.y, fontSize);
+      const pathData = textToPath(font, displayText, line.x, line.y, fontSize);
       if (pathData) {
         const pathEl = createSvgElement(ctx.svgDocument, "path");
         setAttributes(pathEl, {
@@ -63,7 +66,7 @@ export async function renderTextNode(
         y: line.y.toFixed(2),
       });
       applyTextStyles(textEl, styles);
-      textEl.textContent = line.text;
+      textEl.textContent = displayText;
       group.appendChild(textEl);
     }
   }
@@ -163,6 +166,16 @@ function getTextLines(textNode: Text, rootRect: DOMRect): TextLine[] {
   }
 
   return lines;
+}
+
+/** Apply CSS text-transform to a string */
+function applyTextTransform(text: string, transform: string): string {
+  switch (transform) {
+    case "uppercase": return text.toUpperCase();
+    case "lowercase": return text.toLowerCase();
+    case "capitalize": return text.replace(/\b\w/g, (c) => c.toUpperCase());
+    default: return text;
+  }
 }
 
 /** Apply CSS text styles to an SVG <text> element */

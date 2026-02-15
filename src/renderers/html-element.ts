@@ -312,67 +312,48 @@ function renderBorders(
     return;
   }
 
-  // Non-uniform borders: render each side as a line
+  // Non-uniform borders: render each side as a trapezoid path
+  // so corners connect diagonally (matching CSS border rendering).
   const { x, y, width, height } = box;
+  const bT = borders.top.width;
+  const bR = borders.right.width;
+  const bB = borders.bottom.width;
+  const bL = borders.left.width;
 
-  if (borders.top.width > 0 && borders.top.style !== "none") {
-    const line = createSvgElement(ctx.svgDocument, "line");
-    setAttributes(line, {
-      x1: x,
-      y1: y + borders.top.width / 2,
-      x2: x + width,
-      y2: y + borders.top.width / 2,
-      stroke: borders.top.color,
-      "stroke-width": borders.top.width,
-    });
-    const dash = borderDashArray(borders.top.style, borders.top.width);
-    if (dash) line.setAttribute("stroke-dasharray", dash);
-    group.appendChild(line);
+  // Outer corners
+  const ox0 = x, oy0 = y;
+  const ox1 = x + width, oy1 = y + height;
+
+  // Inner corners (inset by border widths)
+  const ix0 = x + bL, iy0 = y + bT;
+  const ix1 = x + width - bR, iy1 = y + height - bB;
+
+  if (bT > 0 && borders.top.style !== "none") {
+    const path = createSvgElement(ctx.svgDocument, "path");
+    path.setAttribute("d", `M ${ox0} ${oy0} L ${ox1} ${oy0} L ${ix1} ${iy0} L ${ix0} ${iy0} Z`);
+    path.setAttribute("fill", borders.top.color);
+    group.appendChild(path);
   }
 
-  if (borders.right.width > 0 && borders.right.style !== "none") {
-    const line = createSvgElement(ctx.svgDocument, "line");
-    setAttributes(line, {
-      x1: x + width - borders.right.width / 2,
-      y1: y,
-      x2: x + width - borders.right.width / 2,
-      y2: y + height,
-      stroke: borders.right.color,
-      "stroke-width": borders.right.width,
-    });
-    const dash = borderDashArray(borders.right.style, borders.right.width);
-    if (dash) line.setAttribute("stroke-dasharray", dash);
-    group.appendChild(line);
+  if (bR > 0 && borders.right.style !== "none") {
+    const path = createSvgElement(ctx.svgDocument, "path");
+    path.setAttribute("d", `M ${ox1} ${oy0} L ${ox1} ${oy1} L ${ix1} ${iy1} L ${ix1} ${iy0} Z`);
+    path.setAttribute("fill", borders.right.color);
+    group.appendChild(path);
   }
 
-  if (borders.bottom.width > 0 && borders.bottom.style !== "none") {
-    const line = createSvgElement(ctx.svgDocument, "line");
-    setAttributes(line, {
-      x1: x,
-      y1: y + height - borders.bottom.width / 2,
-      x2: x + width,
-      y2: y + height - borders.bottom.width / 2,
-      stroke: borders.bottom.color,
-      "stroke-width": borders.bottom.width,
-    });
-    const dash = borderDashArray(borders.bottom.style, borders.bottom.width);
-    if (dash) line.setAttribute("stroke-dasharray", dash);
-    group.appendChild(line);
+  if (bB > 0 && borders.bottom.style !== "none") {
+    const path = createSvgElement(ctx.svgDocument, "path");
+    path.setAttribute("d", `M ${ox1} ${oy1} L ${ox0} ${oy1} L ${ix0} ${iy1} L ${ix1} ${iy1} Z`);
+    path.setAttribute("fill", borders.bottom.color);
+    group.appendChild(path);
   }
 
-  if (borders.left.width > 0 && borders.left.style !== "none") {
-    const line = createSvgElement(ctx.svgDocument, "line");
-    setAttributes(line, {
-      x1: x + borders.left.width / 2,
-      y1: y,
-      x2: x + borders.left.width / 2,
-      y2: y + height,
-      stroke: borders.left.color,
-      "stroke-width": borders.left.width,
-    });
-    const dash = borderDashArray(borders.left.style, borders.left.width);
-    if (dash) line.setAttribute("stroke-dasharray", dash);
-    group.appendChild(line);
+  if (bL > 0 && borders.left.style !== "none") {
+    const path = createSvgElement(ctx.svgDocument, "path");
+    path.setAttribute("d", `M ${ox0} ${oy1} L ${ox0} ${oy0} L ${ix0} ${iy0} L ${ix0} ${iy1} Z`);
+    path.setAttribute("fill", borders.left.color);
+    group.appendChild(path);
   }
 }
 
