@@ -158,12 +158,15 @@ function renderOuterShadow(
     const filterId = ctx.idGenerator.next("shadow");
     const filter = createSvgElement(ctx.svgDocument, "filter");
     const margin = shadow.blur * 2 + Math.abs(shadow.offsetX) + Math.abs(shadow.offsetY) + shadow.spread;
+    // Guard against zero/tiny dimensions to avoid division-by-zero or huge percentages
+    const safeW = Math.max(spreadBox.width, 1);
+    const safeH = Math.max(spreadBox.height, 1);
     setAttributes(filter, {
       id: filterId,
-      x: `-${((margin / spreadBox.width) * 100 + 10).toFixed(0)}%`,
-      y: `-${((margin / spreadBox.height) * 100 + 10).toFixed(0)}%`,
-      width: `${(200 + (margin / spreadBox.width) * 200 + 20).toFixed(0)}%`,
-      height: `${(200 + (margin / spreadBox.height) * 200 + 20).toFixed(0)}%`,
+      x: `-${((margin / safeW) * 100 + 10).toFixed(0)}%`,
+      y: `-${((margin / safeH) * 100 + 10).toFixed(0)}%`,
+      width: `${(200 + (margin / safeW) * 200 + 20).toFixed(0)}%`,
+      height: `${(200 + (margin / safeH) * 200 + 20).toFixed(0)}%`,
     });
 
     const feGaussianBlur = createSvgElement(ctx.svgDocument, "feGaussianBlur");

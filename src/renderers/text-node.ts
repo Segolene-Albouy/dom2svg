@@ -23,9 +23,14 @@ export async function renderTextNode(
   const rootRect = rootElement.getBoundingClientRect();
 
   // Use Range to get per-line client rects
-  const range = document.createRange();
-  range.selectNodeContents(textNode);
-  const rects = range.getClientRects();
+  let rects: DOMRectList;
+  try {
+    const range = document.createRange();
+    range.selectNodeContents(textNode);
+    rects = range.getClientRects();
+  } catch {
+    return null;
+  }
 
   if (rects.length === 0) return null;
 
@@ -192,8 +197,14 @@ function binarySearchLineBreak(
 ): number {
   while (start < end) {
     const mid = Math.floor((start + end) / 2);
-    range.setStart(textNode, mid);
-    range.setEnd(textNode, mid + 1);
+    try {
+      range.setStart(textNode, mid);
+      range.setEnd(textNode, mid + 1);
+    } catch {
+      // Can throw on multi-byte characters (emoji, CJK surrogate pairs)
+      start = mid + 1;
+      continue;
+    }
     const rects = range.getClientRects();
     if (rects.length === 0) {
       start = mid + 1;

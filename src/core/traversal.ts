@@ -40,8 +40,12 @@ export async function walkElement(
 
   // Custom handler
   if (ctx.options.handler) {
-    const result = ctx.options.handler(element, ctx);
-    if (result !== null) return result;
+    try {
+      const result = ctx.options.handler(element, ctx);
+      if (result !== null) return result;
+    } catch (err) {
+      console.warn("dom2svg: Custom handler threw for element:", element, err);
+    }
   }
 
   // SVG element — clone directly
