@@ -27,6 +27,17 @@ export function isCanvasElement(element: Element): element is HTMLCanvasElement 
   return element instanceof HTMLCanvasElement;
 }
 
+/** Check if an element is a form control with a text value */
+export function isFormElement(
+  element: Element,
+): element is HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement {
+  return (
+    element instanceof HTMLInputElement ||
+    element instanceof HTMLTextAreaElement ||
+    element instanceof HTMLSelectElement
+  );
+}
+
 /** Create an SVG element in the SVG namespace */
 export function createSvgElement<K extends keyof SVGElementTagNameMap>(
   doc: Document,

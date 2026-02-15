@@ -4,6 +4,7 @@ import {
   setAttributes,
   isImageElement,
   isCanvasElement,
+  isFormElement,
   getPseudoStyles,
 } from "../utils/dom.js";
 import { getRelativeBox, buildRoundedRectPath } from "../utils/geometry.js";
@@ -143,6 +144,11 @@ export async function renderHtmlElement(
         });
         group.appendChild(imgEl);
       }
+    }
+
+    // Form element content (<input>, <select>, <textarea>)
+    if (isFormElement(element)) {
+      renderFormContent(element, styles, box, ctx, group);
     }
 
     // Pseudo-elements (::before, ::after)
@@ -364,6 +370,54 @@ function applyClipMask(
   wrapper.setAttribute("mask", `url(#${maskId})`);
   wrapper.appendChild(target);
   group.appendChild(wrapper);
+}
+
+/** Render form element text content (value, placeholder, selected option) */
+function renderFormContent(
+  element: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement,
+  styles: CSSStyleDeclaration,
+  box: BoxGeometry,
+  ctx: RenderContext,
+  group: SVGGElement,
+): void {
+  let text = "";
+  let isPlaceholder = false;
+
+  if (element instanceof HTMLSelectElement) {
+    const selected = element.selectedOptions[0];
+    text = selected?.text ?? "";
+  } else {
+    text = element.value;
+    if (!text && element.placeholder) {
+      text = element.placeholder;
+      isPlaceholder = true;
+    }
+  }
+
+  if (!text) return;
+
+  const fontSize = parseFloat(styles.fontSize) || 16;
+  const paddingLeft = parseFloat(styles.paddingLeft) || 0;
+  const paddingTop = parseFloat(styles.paddingTop) || 0;
+
+  const textEl = createSvgElement(ctx.svgDocument, "text");
+  setAttributes(textEl, {
+    x: (box.x + paddingLeft).toFixed(2),
+    y: (box.y + paddingTop + fontSize * 0.8).toFixed(2),
+    "font-family": styles.fontFamily,
+    "font-size": styles.fontSize,
+    "font-weight": styles.fontWeight,
+    "font-style": styles.fontStyle,
+    fill: isPlaceholder ? (styles.caretColor !== "auto" ? styles.caretColor : "gray") : styles.color,
+  });
+
+  if (isPlaceholder) {
+    // Use placeholder color (approximation — actual ::placeholder is hard to read)
+    textEl.setAttribute("opacity", "0.54");
+  }
+
+  textEl.textContent = text;
+  group.appendChild(textEl);
 }
 
 /** Render CSS outline as a stroked shape outside the border box */
