@@ -1,6 +1,7 @@
 import type { RenderContext } from "../types.js";
 import { createSvgElement, setAttributes } from "../utils/dom.js";
 import { textToPath, cleanFontFamily } from "../assets/fonts.js";
+import { parseTextShadows, createTextShadowFilter } from "../assets/text-shadow.js";
 
 /**
  * Render a DOM Text node as SVG <text> or <path> elements.
@@ -95,7 +96,19 @@ export async function renderTextNode(
     }
   }
 
-  return group.childNodes.length > 0 ? group : null;
+  if (group.childNodes.length === 0) return null;
+
+  // Apply text-shadow filter if present
+  const textShadowValue = styles.textShadow;
+  if (textShadowValue && textShadowValue !== "none") {
+    const shadows = parseTextShadows(textShadowValue);
+    const filterId = createTextShadowFilter(shadows, ctx);
+    if (filterId) {
+      group.setAttribute("filter", `url(#${filterId})`);
+    }
+  }
+
+  return group;
 }
 
 interface TextLine {
