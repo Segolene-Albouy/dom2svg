@@ -198,7 +198,8 @@ function rasterizeRadialGradient(
   // Use transform to create an elliptical gradient
   const rx = width / 2;
   const ry = height / 2;
-  const radius = isCircle ? Math.min(rx, ry) : Math.max(rx, ry);
+  // CSS default: farthest-corner. For a circle, that's the distance to the corner.
+  const radius = isCircle ? Math.sqrt(rx * rx + ry * ry) : Math.max(rx, ry);
 
   ctx.save();
   if (!isCircle && rx !== ry) {

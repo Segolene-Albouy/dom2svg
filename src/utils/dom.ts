@@ -44,6 +44,10 @@ export function setAttributes(
 ): void {
   for (const [key, value] of Object.entries(attrs)) {
     element.setAttribute(key, String(value));
+    // Also set xlink:href for SVG 1.1 compatibility (e.g. Figma, re-parsed SVG)
+    if (key === "href") {
+      element.setAttributeNS(XLINK_NS, "xlink:href", String(value));
+    }
   }
 }
 
