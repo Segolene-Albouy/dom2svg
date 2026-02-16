@@ -128,6 +128,11 @@ interface TextLine {
  *
  * When an opentype font is available, we use its actual ascender metric.
  * Otherwise we fall back to 0.8 which approximates common Latin fonts.
+ *
+ * When the Range rect is inflated by tall inline siblings (e.g. KaTeX
+ * strut/pstrut elements that are 3em inline-blocks), the parent element's
+ * bounding rect gives the actual text area. We detect inflation by comparing
+ * rectHeight against parentHeight and use the parent's metrics instead.
  */
 function baselineY(
   rectTop: number,
@@ -135,9 +140,21 @@ function baselineY(
   fontSize: number,
   rootTop: number,
   ascenderRatio: number = 0.8,
+  parentRect?: { top: number; height: number },
 ): number {
-  const topPadding = (rectHeight - fontSize) / 2;
-  return rectTop - rootTop + topPadding + fontSize * ascenderRatio;
+  let effectiveTop = rectTop;
+  let effectiveHeight = rectHeight;
+
+  // If the Range rect is much taller than the parent element, the line box
+  // was inflated by tall inline siblings (struts). Use the parent's bounds
+  // for a more accurate baseline calculation.
+  if (parentRect && rectHeight > fontSize * 2 && parentRect.height < rectHeight * 0.8) {
+    effectiveTop = parentRect.top;
+    effectiveHeight = parentRect.height;
+  }
+
+  const topPadding = (effectiveHeight - fontSize) / 2;
+  return effectiveTop - rootTop + topPadding + fontSize * ascenderRatio;
 }
 
 /** Get per-line text and positions using Range API */
@@ -151,6 +168,12 @@ function getTextLines(textNode: Text, rootRect: DOMRect, ascenderRatio: number =
 
   const styles = window.getComputedStyle(parent);
   const fontSize = parseFloat(styles.fontSize) || 16;
+
+  // Get parent element's bounding rect for inflated line box detection.
+  // When tall inline siblings (e.g. KaTeX struts) inflate the Range rect,
+  // the parent element's rect reflects the actual text area.
+  const pRect = parent.getBoundingClientRect();
+  const parentRect = { top: pRect.top, height: pRect.height };
 
   const range = document.createRange();
   range.selectNodeContents(textNode);
@@ -172,7 +195,7 @@ function getTextLines(textNode: Text, rootRect: DOMRect, ascenderRatio: number =
       lines.push({
         text: normalizeWhitespace(text, whiteSpace),
         x: rect.left - rootRect.left,
-        y: baselineY(rect.top, rect.height, fontSize, rootRect.top, ascenderRatio),
+        y: baselineY(rect.top, rect.height, fontSize, rootRect.top, ascenderRatio, parentRect),
       });
       return lines;
     }
@@ -201,7 +224,7 @@ function getTextLines(textNode: Text, rootRect: DOMRect, ascenderRatio: number =
       lines.push({
         text: lineText,
         x: lineRect.left - rootRect.left,
-        y: baselineY(lineRect.top, lineRect.height, fontSize, rootRect.top, ascenderRatio),
+        y: baselineY(lineRect.top, lineRect.height, fontSize, rootRect.top, ascenderRatio, parentRect),
       });
     }
     charStart = charEnd;

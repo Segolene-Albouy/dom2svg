@@ -5,8 +5,8 @@ export interface FontConfig {
   style?: string;
 }
 
-/** Font mapping: family name → URL string or detailed config */
-export type FontMapping = Record<string, string | FontConfig>;
+/** Font mapping: family name → URL string, single config, or array of configs for multiple weights/styles */
+export type FontMapping = Record<string, string | FontConfig | FontConfig[]>;
 
 /** Options for domToSvg() */
 export interface DomToSvgOptions {
@@ -22,6 +22,12 @@ export interface DomToSvgOptions {
   padding?: number;
   /** Whether to convert text to paths using opentype.js (default: false) */
   textToPath?: boolean;
+  /** Skip applying CSS transforms as SVG attributes (default: false).
+   *  When true, element positions come solely from getBoundingClientRect
+   *  which already includes CSS transforms. Use this when capturing containers
+   *  with nested CSS transforms (e.g. SvelteFlow, React Flow) where
+   *  the default behaviour would double-apply transforms. */
+  flattenTransforms?: boolean;
 }
 
 /** Internal render context passed through the tree */

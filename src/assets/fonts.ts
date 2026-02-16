@@ -20,10 +20,20 @@ export function createFontCache(mapping: FontMapping): FontCache {
     return `${family}|${weight ?? "normal"}|${style ?? "normal"}`;
   }
 
+  function normalizeWeight(w?: string | number): number {
+    if (w === undefined || w === "normal") return 400;
+    if (w === "bold") return 700;
+    return typeof w === "string" ? parseInt(w, 10) || 400 : w;
+  }
+
+  function normalizeStyle(s?: string): string {
+    return s === "italic" || s === "oblique" ? "italic" : "normal";
+  }
+
   function findConfig(
     family: string,
-    _weight?: string | number,
-    _style?: string,
+    weight?: string | number,
+    style?: string,
   ): { url: string; weight?: string | number; style?: string } | null {
     const entry = mapping[family];
     if (!entry) return null;
@@ -32,7 +42,27 @@ export function createFontCache(mapping: FontMapping): FontCache {
       return { url: entry };
     }
 
-    return entry as FontConfig;
+    if (!Array.isArray(entry)) {
+      return entry as FontConfig;
+    }
+
+    // Array of configs: find best match by weight + style
+    const targetWeight = normalizeWeight(weight);
+    const targetStyle = normalizeStyle(style);
+    let best: FontConfig | null = null;
+    let bestScore = -1;
+
+    for (const cfg of entry) {
+      let score = 0;
+      if (normalizeStyle(cfg.style) === targetStyle) score += 2;
+      if (normalizeWeight(cfg.weight) === targetWeight) score += 1;
+      if (score > bestScore) {
+        bestScore = score;
+        best = cfg;
+      }
+    }
+
+    return best ?? entry[0] ?? null;
   }
 
   return {

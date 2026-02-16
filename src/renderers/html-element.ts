@@ -43,7 +43,9 @@ export async function renderHtmlElement(
   const radii = clampRadii(parseBorderRadii(styles), box.width, box.height);
 
   // CSS Transforms (applied even when visibility:hidden for layout)
-  if (styles.transform && styles.transform !== "none") {
+  // When flattenTransforms is enabled, skip — getBoundingClientRect positions
+  // already include the effect of CSS transforms.
+  if (!ctx.options.flattenTransforms && styles.transform && styles.transform !== "none") {
     const svgTransform = cssTransformToSvg(
       styles.transform,
       styles.transformOrigin,
@@ -821,6 +823,58 @@ async function renderSingleBackgroundLayer(
   }
 }
 
+/** Check if a pseudo-element has visual properties (background, clip-path) */
+function hasVisualProperties(styles: CSSStyleDeclaration): boolean {
+  if (parseBackgroundColor(styles)) return true;
+  if (hasBackgroundImage(styles)) return true;
+  const clipPath = styles.clipPath || (styles as any).webkitClipPath;
+  if (clipPath && clipPath !== "none") return true;
+  return false;
+}
+
+/**
+ * Measure a pseudo-element's box by inserting a temporary DOM element
+ * styled with the same positioning properties.
+ */
+function measurePseudoBox(
+  element: Element,
+  pseudo: "::before" | "::after",
+  styles: CSSStyleDeclaration,
+  rootElement: Element,
+): { x: number; y: number; width: number; height: number } | null {
+  const marker = document.createElement("span");
+  marker.style.cssText = `
+    position: ${styles.position};
+    display: ${styles.display === "none" ? "none" : styles.display};
+    top: ${styles.top}; right: ${styles.right};
+    bottom: ${styles.bottom}; left: ${styles.left};
+    width: ${styles.width}; height: ${styles.height};
+    margin: ${styles.margin}; padding: ${styles.padding};
+    box-sizing: ${styles.boxSizing};
+    visibility: hidden;
+    pointer-events: none;
+  `;
+
+  if (pseudo === "::before") {
+    element.insertBefore(marker, element.firstChild);
+  } else {
+    element.appendChild(marker);
+  }
+
+  const rect = marker.getBoundingClientRect();
+  element.removeChild(marker);
+
+  if (rect.width === 0 && rect.height === 0) return null;
+
+  const rootRect = rootElement.getBoundingClientRect();
+  return {
+    x: rect.left - rootRect.left,
+    y: rect.top - rootRect.top,
+    width: rect.width,
+    height: rect.height,
+  };
+}
+
 /** Render a pseudo-element (::before or ::after) */
 async function renderPseudoElement(
   element: Element,
@@ -832,13 +886,51 @@ async function renderPseudoElement(
   const styles = getPseudoStyles(element, pseudo);
   const content = styles.content;
 
-  // No content or empty
-  if (!content || content === "none" || content === "normal" || content === '""') {
+  // content:none or content:normal means the pseudo-element is not generated
+  if (!content || content === "none" || content === "normal") {
     return;
   }
 
   // Extract text content (strip quotes)
-  let text = content.replace(/^["']|["']$/g, "");
+  const text = content.replace(/^["']|["']$/g, "");
+  const hasVisuals = hasVisualProperties(styles);
+
+  // Skip if no text AND no visual properties
+  if (!text && !hasVisuals) return;
+
+  // Render visual properties (background + clip-path) for visual-only pseudo-elements.
+  // Many UI frameworks use ::before/::after with content:'' plus background and
+  // clip-path to render decorative shapes (e.g. custom handle icons, arrows).
+  if (hasVisuals) {
+    const pseudoBox = measurePseudoBox(element, pseudo, styles, rootElement);
+    if (pseudoBox) {
+      const bgColor = parseBackgroundColor(styles);
+      if (bgColor) {
+        const rect = createSvgElement(ctx.svgDocument, "rect");
+        setAttributes(rect, {
+          x: pseudoBox.x,
+          y: pseudoBox.y,
+          width: pseudoBox.width,
+          height: pseudoBox.height,
+          fill: bgColor,
+        });
+
+        // Apply clip-path if present
+        const clipPathValue = styles.clipPath || (styles as any).webkitClipPath;
+        if (clipPathValue && clipPathValue !== "none") {
+          const shape = parseClipPath(clipPathValue);
+          if (shape) {
+            const clipId = createSvgClipPath(shape, pseudoBox, ctx);
+            if (clipId) rect.setAttribute("clip-path", `url(#${clipId})`);
+          }
+        }
+
+        group.appendChild(rect);
+      }
+    }
+  }
+
+  // Render text content
   if (!text) return;
 
   const rootRect = rootElement.getBoundingClientRect();
@@ -876,6 +968,22 @@ async function renderPseudoElement(
 
   element.removeChild(marker);
 
+  // Background for text pseudo-element (only if not already rendered above)
+  if (!hasVisuals) {
+    const bgColor = parseBackgroundColor(styles);
+    if (bgColor) {
+      const bgRect = createSvgElement(ctx.svgDocument, "rect");
+      setAttributes(bgRect, {
+        x: markerX,
+        y: markerRect.top - rootRect.top,
+        width: markerWidth,
+        height: markerHeight,
+        fill: bgColor,
+      });
+      group.appendChild(bgRect);
+    }
+  }
+
   // Create a text element for the pseudo content
   const textEl = createSvgElement(ctx.svgDocument, "text");
   setAttributes(textEl, {
@@ -893,20 +1001,5 @@ async function renderPseudoElement(
   }
 
   textEl.textContent = text;
-
-  // Background for pseudo-element
-  const bgColor = parseBackgroundColor(styles);
-  if (bgColor) {
-    const bgRect = createSvgElement(ctx.svgDocument, "rect");
-    setAttributes(bgRect, {
-      x: markerX,
-      y: markerRect.top - rootRect.top,
-      width: markerWidth,
-      height: markerHeight,
-      fill: bgColor,
-    });
-    group.appendChild(bgRect);
-  }
-
   group.appendChild(textEl);
 }

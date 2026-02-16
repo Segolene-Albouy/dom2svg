@@ -59,6 +59,14 @@ export async function walkElement(
       clone.setAttribute("y", String(box.y));
       clone.setAttribute("width", String(box.width));
       clone.setAttribute("height", String(box.height));
+
+      // Preserve overflow:visible from CSS — many frameworks (SvelteFlow,
+      // React Flow) use CSS to set overflow:visible on edge SVGs so paths
+      // can extend beyond the SVG viewport. Without this, cloned SVGs
+      // default to overflow:hidden and clip the content.
+      if (styles.overflow === "visible") {
+        clone.setAttribute("overflow", "visible");
+      }
     }
 
     return clone;
