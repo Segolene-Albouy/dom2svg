@@ -156,6 +156,12 @@ export async function renderHtmlElement(
       renderListMarker(element, styles, box, ctx, group);
     }
 
+    // CSS mask-image (used by icon systems like Wikipedia's Codex icons)
+    const maskImage = styles.webkitMaskImage || (styles as any).maskImage;
+    if (maskImage && maskImage !== "none") {
+      await applyMaskImage(maskImage, styles, box, ctx, group);
+    }
+
     // Pseudo-elements (::before, ::after)
     await renderPseudoElement(element, "::before", rootElement, ctx, group);
   }
@@ -375,6 +381,65 @@ function applyClipMask(
   wrapper.setAttribute("mask", `url(#${maskId})`);
   wrapper.appendChild(target);
   group.appendChild(wrapper);
+}
+
+/**
+ * Apply CSS mask-image as an SVG alpha mask.
+ *
+ * Many icon systems (e.g. Wikipedia Codex, Material Design) use mask-image
+ * to shape a solid background-color into an icon. We convert this to an SVG
+ * <mask> element with mask-type:alpha and embed the mask image inside it.
+ */
+async function applyMaskImage(
+  maskImage: string,
+  styles: CSSStyleDeclaration,
+  box: BoxGeometry,
+  ctx: RenderContext,
+  group: SVGGElement,
+): Promise<void> {
+  const url = extractUrlFromCss(maskImage);
+  if (!url) return;
+
+  // Convert external URLs to data URLs for self-contained SVG output
+  let imageUrl = url;
+  if (!url.startsWith("data:")) {
+    try {
+      imageUrl = await imageToDataUrl(url);
+    } catch {
+      return; // Skip if fetch fails
+    }
+  }
+
+  // Parse mask sizing (default: mask-size covers the element)
+  const maskSize = styles.webkitMaskSize || (styles as any).maskSize || "auto";
+  let imgWidth = box.width;
+  let imgHeight = box.height;
+  if (maskSize !== "auto" && maskSize !== "contain" && maskSize !== "cover") {
+    const parts = maskSize.split(/\s+/);
+    const w = parseFloat(parts[0]!);
+    const h = parseFloat(parts[1] || parts[0]!);
+    if (!isNaN(w)) imgWidth = w;
+    if (!isNaN(h)) imgHeight = h;
+  }
+
+  // Create the SVG mask with alpha mode
+  const maskId = ctx.idGenerator.next("mask");
+  const mask = createSvgElement(ctx.svgDocument, "mask");
+  mask.setAttribute("id", maskId);
+  mask.setAttribute("style", "mask-type: alpha");
+
+  const imgEl = createSvgElement(ctx.svgDocument, "image");
+  setAttributes(imgEl, {
+    x: box.x,
+    y: box.y,
+    width: imgWidth,
+    height: imgHeight,
+    href: imageUrl,
+  });
+  mask.appendChild(imgEl);
+  ctx.defs.appendChild(mask);
+
+  group.setAttribute("mask", `url(#${maskId})`);
 }
 
 /** Render list item marker (bullet, number, custom ::marker content) */

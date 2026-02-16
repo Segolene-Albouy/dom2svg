@@ -19,7 +19,18 @@ export function renderSvgElement(
 }
 
 /** Deep clone an SVG element into the target document, preserving namespaces */
-function cloneWithNamespace(node: SVGElement, ctx: RenderContext): SVGElement {
+function cloneWithNamespace(
+  node: SVGElement,
+  ctx: RenderContext,
+  resolveDepth: number = 0,
+): SVGElement {
+  // Resolve <use> elements by inlining the referenced content
+  if (node.localName === "use" && resolveDepth < 5) {
+    const resolved = resolveUseElement(node, ctx, resolveDepth);
+    if (resolved) return resolved;
+    // Fallback: clone as-is if resolution fails
+  }
+
   const clone = ctx.svgDocument.createElementNS(
     node.namespaceURI || SVG_NS,
     node.localName,
@@ -44,13 +55,87 @@ function cloneWithNamespace(node: SVGElement, ctx: RenderContext): SVGElement {
   // Recurse into children
   for (const child of Array.from(node.childNodes)) {
     if (child.nodeType === Node.ELEMENT_NODE) {
-      clone.appendChild(cloneWithNamespace(child as SVGElement, ctx));
+      clone.appendChild(cloneWithNamespace(child as SVGElement, ctx, resolveDepth));
     } else if (child.nodeType === Node.TEXT_NODE) {
       clone.appendChild(ctx.svgDocument.createTextNode(child.textContent || ""));
     }
   }
 
   return clone;
+}
+
+/**
+ * Resolve a <use> element by finding the referenced <symbol>/<g>/element
+ * and inlining its content. Returns null if the reference can't be resolved.
+ *
+ * SVG <use> elements reference definitions via href="#id", often pointing to
+ * <symbol> elements in hidden sprite sheets elsewhere in the DOM. Since those
+ * symbols won't exist in our output SVG, we inline the content directly.
+ */
+function resolveUseElement(
+  useEl: SVGElement,
+  ctx: RenderContext,
+  resolveDepth: number,
+): SVGElement | null {
+  const href =
+    useEl.getAttribute("href") ||
+    useEl.getAttributeNS(XLINK_NS, "href");
+
+  if (!href || !href.startsWith("#")) return null;
+
+  const refId = href.slice(1);
+  const refEl = document.getElementById(refId);
+  if (!refEl) return null;
+
+  const group = ctx.svgDocument.createElementNS(SVG_NS, "g") as SVGElement;
+
+  // Copy presentation attributes from <use> (except href and geometry)
+  const skipAttrs = new Set(["href", "xlink:href", "x", "y", "width", "height"]);
+  for (const attr of Array.from(useEl.attributes)) {
+    if (skipAttrs.has(attr.localName)) continue;
+    if (attr.namespaceURI === XLINK_NS) continue;
+    if (attr.namespaceURI) {
+      group.setAttributeNS(attr.namespaceURI, attr.localName, attr.value);
+    } else {
+      group.setAttribute(attr.localName, attr.value);
+    }
+  }
+
+  // Apply x/y translation from <use>
+  const x = parseFloat(useEl.getAttribute("x") || "0") || 0;
+  const y = parseFloat(useEl.getAttribute("y") || "0") || 0;
+  if (x !== 0 || y !== 0) {
+    const existing = group.getAttribute("transform") || "";
+    group.setAttribute("transform", `translate(${x},${y}) ${existing}`.trim());
+  }
+
+  // Inline CSS-applied fill/stroke from the <use> element
+  inlineSvgPresentationStyles(useEl, group);
+
+  if (refEl.localName === "symbol") {
+    // <symbol> has a viewBox — wrap content in an <svg> to apply it
+    const viewBox = refEl.getAttribute("viewBox");
+    const width = useEl.getAttribute("width") || refEl.getAttribute("width");
+    const height = useEl.getAttribute("height") || refEl.getAttribute("height");
+
+    const wrapper = ctx.svgDocument.createElementNS(SVG_NS, "svg") as SVGElement;
+    if (viewBox) wrapper.setAttribute("viewBox", viewBox);
+    if (width) wrapper.setAttribute("width", width);
+    if (height) wrapper.setAttribute("height", height);
+    wrapper.setAttribute("overflow", "hidden");
+
+    for (const child of Array.from(refEl.childNodes)) {
+      if (child.nodeType === Node.ELEMENT_NODE) {
+        wrapper.appendChild(cloneWithNamespace(child as SVGElement, ctx, resolveDepth + 1));
+      }
+    }
+    group.appendChild(wrapper);
+  } else {
+    // For other elements (<g>, <path>, etc.), clone the element itself
+    group.appendChild(cloneWithNamespace(refEl as SVGElement, ctx, resolveDepth + 1));
+  }
+
+  return group;
 }
 
 /** Inline key SVG presentation properties that may come from CSS rather than attributes */
