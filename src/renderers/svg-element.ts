@@ -3,13 +3,17 @@ import { SVG_NS, XLINK_NS } from "../utils/dom.js";
 
 /**
  * Clone an inline SVG element into the output document,
- * rewriting IDs to avoid conflicts between multiple cloned SVGs.
+ * rewriting IDs to avoid conflicts between multiple cloned SVGs
+ * and resolving `currentColor` to the actual computed color.
  */
 export function renderSvgElement(
   element: SVGElement,
   ctx: RenderContext,
 ): SVGElement {
+  // Resolve currentColor from the SVG element's inherited CSS color
+  const computedColor = window.getComputedStyle(element).color || "rgb(0, 0, 0)";
   const clone = cloneWithNamespace(element, ctx);
+  resolveCurrentColor(clone, computedColor);
   rewriteIds(clone, ctx);
   return clone;
 }
@@ -110,6 +114,20 @@ function rewriteUrlReferences(
   for (const child of Array.from(element.children)) {
     if (child instanceof SVGElement) {
       rewriteUrlReferences(child, idMap);
+    }
+  }
+}
+
+/** Replace `currentColor` in fill/stroke/color attributes with the resolved color */
+function resolveCurrentColor(element: SVGElement, color: string): void {
+  for (const attr of Array.from(element.attributes)) {
+    if (attr.value === "currentColor") {
+      element.setAttribute(attr.localName, color);
+    }
+  }
+  for (const child of Array.from(element.children)) {
+    if (child instanceof SVGElement) {
+      resolveCurrentColor(child, color);
     }
   }
 }
