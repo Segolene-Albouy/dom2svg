@@ -23,7 +23,7 @@ import {
 import { parseLinearGradient, createSvgLinearGradient, rasterizeGradient } from "../assets/gradients.js";
 import { imageToDataUrl, extractUrlFromCss, canvasToDataUrl } from "../assets/images.js";
 import { cssTransformToSvg } from "../transforms/svg.js";
-import { createDropShadowFilter } from "../assets/filters.js";
+import { createSvgFilter } from "../assets/filters.js";
 import { parseBoxShadows, renderBoxShadows } from "../assets/box-shadow.js";
 import { parseClipPath, createSvgClipPath } from "../assets/clip-path.js";
 
@@ -69,9 +69,9 @@ export async function renderHtmlElement(
   const hidden = isVisibilityHidden(styles);
 
   if (!hidden) {
-    // CSS Filters (drop-shadow)
+    // CSS Filters (blur, brightness, contrast, drop-shadow, grayscale, etc.)
     if (styles.filter && styles.filter !== "none") {
-      const filterId = createDropShadowFilter(styles.filter, ctx);
+      const filterId = createSvgFilter(styles.filter, ctx);
       if (filterId) {
         group.setAttribute("filter", `url(#${filterId})`);
       }

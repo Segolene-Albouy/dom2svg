@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseDropShadow } from "./filters.js";
+import { parseDropShadow, parseCssFilterFunctions } from "./filters.js";
 
 describe("parseDropShadow", () => {
   it("returns null for non-drop-shadow values", () => {
@@ -77,5 +77,56 @@ describe("parseDropShadow", () => {
     expect(result!.offsetX).toBe(0);
     expect(result!.offsetY).toBe(0);
     expect(result!.blur).toBe(0);
+  });
+});
+
+describe("parseCssFilterFunctions", () => {
+  it("returns empty for none", () => {
+    expect(parseCssFilterFunctions("none")).toEqual([]);
+  });
+
+  it("parses single blur", () => {
+    const result = parseCssFilterFunctions("blur(5px)");
+    expect(result).toEqual([{ name: "blur", args: "5px" }]);
+  });
+
+  it("parses single grayscale with %", () => {
+    const result = parseCssFilterFunctions("grayscale(50%)");
+    expect(result).toEqual([{ name: "grayscale", args: "50%" }]);
+  });
+
+  it("parses multiple chained filters", () => {
+    const result = parseCssFilterFunctions("blur(2px) brightness(1.5) contrast(0.8)");
+    expect(result).toHaveLength(3);
+    expect(result[0]).toEqual({ name: "blur", args: "2px" });
+    expect(result[1]).toEqual({ name: "brightness", args: "1.5" });
+    expect(result[2]).toEqual({ name: "contrast", args: "0.8" });
+  });
+
+  it("handles drop-shadow with nested parentheses (rgba)", () => {
+    const result = parseCssFilterFunctions("drop-shadow(2px 4px 6px rgba(0, 0, 0, 0.5))");
+    expect(result).toHaveLength(1);
+    expect(result[0]!.name).toBe("drop-shadow");
+    expect(result[0]!.args).toBe("2px 4px 6px rgba(0, 0, 0, 0.5)");
+  });
+
+  it("handles mixed filters including drop-shadow", () => {
+    const result = parseCssFilterFunctions("blur(3px) drop-shadow(2px 2px 4px black) grayscale(100%)");
+    expect(result).toHaveLength(3);
+    expect(result[0]!.name).toBe("blur");
+    expect(result[1]!.name).toBe("drop-shadow");
+    expect(result[2]!.name).toBe("grayscale");
+  });
+
+  it("parses hue-rotate with deg", () => {
+    const result = parseCssFilterFunctions("hue-rotate(90deg)");
+    expect(result).toEqual([{ name: "hue-rotate", args: "90deg" }]);
+  });
+
+  it("parses sepia and invert", () => {
+    const result = parseCssFilterFunctions("sepia(0.5) invert(1)");
+    expect(result).toHaveLength(2);
+    expect(result[0]).toEqual({ name: "sepia", args: "0.5" });
+    expect(result[1]).toEqual({ name: "invert", args: "1" });
   });
 });
