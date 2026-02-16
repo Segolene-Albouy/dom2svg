@@ -10,11 +10,11 @@ A node-based pipeline editor — DOM on the left, exported SVG on the right:
 
 ![Pipeline editor export](media/demo-pipeline.png)
 
-Real-world UI components (stat cards, avatars, alerts, buttons, progress bars, charts, palettes, tables):
+Real-world UI components (stat cards, avatars, alerts, buttons, progress bars, charts, palettes, tables, toasts, tags, toggles, breadcrumbs, donut charts, skeleton loaders, keyboard shortcuts):
 
 ![Real-world components](media/demo-components.png)
 
-37 CSS features rendered as DOM elements and their SVG counterparts:
+55+ CSS features rendered as DOM elements and their SVG counterparts:
 
 ![Feature showcase](media/demo-features.png)
 
@@ -249,6 +249,7 @@ interface DomToSvgOptions {
 
 | Feature | Support |
 |---------|---------|
+| **Backgrounds** | |
 | Background colors | Full |
 | Linear gradients | Full (correct diagonal angles on non-square elements) |
 | Radial gradients | Full (circle and ellipse, rasterized via Canvas) |
@@ -256,31 +257,49 @@ interface DomToSvgOptions {
 | Multiple backgrounds | Full (layered in correct CSS order) |
 | Background size/position | Full (`contain`, `cover`, explicit sizes) |
 | Background images (`url()`) | Full (inlined as data URLs) |
+| **Borders & Outlines** | |
 | Borders (uniform and per-side) | Full (solid, dashed, dotted) |
 | Border radius (uniform and non-uniform) | Full (including pill shapes) |
-| Box shadow | Full (outer and inset, multiple, spread, blur) |
 | Outline | Full (solid, dashed, dotted with offset) |
+| **Shadows** | |
+| Box shadow | Full (outer and inset, multiple, spread, blur) |
+| Text shadow | Full (single and multiple, via SVG filters) |
+| **CSS Filters** | |
+| `blur()` | Full (via `feGaussianBlur`) |
+| `brightness()` | Full (via `feComponentTransfer`) |
+| `contrast()` | Full (via `feComponentTransfer`) |
+| `drop-shadow()` | Full (via `feDropShadow`) |
+| `grayscale()` | Full (via `feColorMatrix`) |
+| `hue-rotate()` | Full (via `feColorMatrix`) |
+| `invert()` | Full (via `feComponentTransfer`) |
+| `opacity()` | Full (via `feComponentTransfer`) |
+| `saturate()` | Full (via `feColorMatrix`) |
+| `sepia()` | Full (via `feColorMatrix`) |
+| Filter chaining | Full (multiple filters compose in order) |
+| **Layout & Clipping** | |
 | CSS transforms | Full (translate, rotate, scale, skew, matrix) |
 | Transform origin | Full |
 | Opacity | Full |
 | Overflow clipping | Full (`hidden`, `clip`, `scroll`, `auto`) |
 | `clip-path` | Full (`inset`, `circle`, `ellipse`, `polygon`, `path`) |
 | Z-index / stacking contexts | Full (CSS 2.2 paint order) |
+| **Elements** | |
 | Inline SVGs | Full (deep clone with ID namespacing) |
-| `<img>` elements | Full (inlined as data URLs) |
+| `<img>` elements | Full (inlined as data URLs, border-radius clipping) |
 | `<canvas>` elements | Full (via `toDataURL()`) |
-| Form elements | Full (`<input>`, `<select>`, `<textarea>` values and placeholders) |
-| Pseudo-elements (`::before`, `::after`) | Partial (text content) |
-| `drop-shadow()` filter | Full |
+| Form elements | Full (`<input>`, `<select>`, `<textarea>` with multiline) |
+| Pseudo-elements (`::before`, `::after`) | Full (text content, browser-measured positioning) |
+| List markers | Full (disc, circle, square, decimal) |
+| **Text** | |
 | Text rendering | Full (`<text>` elements, or `<path>` with `textToPath`) |
-| Text shadow | Full (single and multiple, via SVG filters) |
 | Text decoration | Full (underline, line-through) |
 | Text transform | Full (uppercase, lowercase, capitalize) |
 | Text overflow (ellipsis) | Full (appends ellipsis character) |
 | Letter spacing | Full |
-| List markers | Full (disc, circle, square, decimal) |
+| **Visibility** | |
 | `visibility: hidden` | Correctly skipped (children still rendered) |
 | `display: none` | Correctly skipped |
+| `opacity: 0` | Rendered as group with `opacity="0"` (subtree preserved) |
 
 ## Architecture
 
@@ -299,7 +318,7 @@ src/
 │   ├── images.ts         # Image/canvas → data URL inlining
 │   ├── fonts.ts          # Font loading + text-to-path (opentype.js)
 │   ├── gradients.ts      # CSS gradient → SVG gradient / rasterized image
-│   ├── filters.ts        # drop-shadow → SVG filter
+│   ├── filters.ts        # CSS filters → SVG filters (blur, grayscale, sepia, etc.)
 │   ├── box-shadow.ts     # box-shadow → SVG filter / mask
 │   ├── clip-path.ts      # clip-path → SVG clipPath
 │   └── text-shadow.ts    # text-shadow → SVG filter
@@ -323,7 +342,7 @@ The CLI additionally uses [puppeteer-core](https://pptr.dev/) for headless Chrom
 npm install
 npm run build        # ESM + CJS + CLI bundles via tsup
 npm run type-check   # TypeScript strict mode
-npm run test         # 162 unit tests via Vitest
+npm run test         # 211 unit tests via Vitest
 npm run test:watch   # Watch mode
 npm run demo         # Visual demo at localhost:5173
 ```
