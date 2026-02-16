@@ -36,6 +36,11 @@ function cloneWithNamespace(node: SVGElement, ctx: RenderContext): SVGElement {
     }
   }
 
+  // Inline CSS-applied fill/stroke that aren't present as attributes.
+  // Many icon systems (e.g. GitHub Octicons) set fill via CSS rules like
+  // `.octicon { fill: currentColor }` — these won't be in the attributes.
+  inlineSvgPresentationStyles(node, clone);
+
   // Recurse into children
   for (const child of Array.from(node.childNodes)) {
     if (child.nodeType === Node.ELEMENT_NODE) {
@@ -46,6 +51,35 @@ function cloneWithNamespace(node: SVGElement, ctx: RenderContext): SVGElement {
   }
 
   return clone;
+}
+
+/** Inline key SVG presentation properties that may come from CSS rather than attributes */
+function inlineSvgPresentationStyles(source: SVGElement, clone: SVGElement): void {
+  const styles = window.getComputedStyle(source);
+
+  // fill — default in SVG is "rgb(0, 0, 0)" (black)
+  if (!clone.hasAttribute("fill")) {
+    const fill = styles.fill;
+    if (fill && fill !== "rgb(0, 0, 0)") {
+      clone.setAttribute("fill", fill);
+    }
+  }
+
+  // stroke — default is "none"
+  if (!clone.hasAttribute("stroke")) {
+    const stroke = styles.stroke;
+    if (stroke && stroke !== "none") {
+      clone.setAttribute("stroke", stroke);
+    }
+  }
+
+  // opacity
+  if (!clone.hasAttribute("opacity")) {
+    const opacity = styles.opacity;
+    if (opacity && opacity !== "1") {
+      clone.setAttribute("opacity", opacity);
+    }
+  }
 }
 
 /** Rewrite all id attributes and url(#id) references in the cloned tree */
