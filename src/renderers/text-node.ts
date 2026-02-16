@@ -21,6 +21,7 @@ export async function renderTextNode(
 
   const styles = window.getComputedStyle(parent);
   if (styles.visibility === "hidden") return null;
+  const whiteSpace = styles.whiteSpace;
   const rootRect = rootElement.getBoundingClientRect();
 
   // Use Range to get per-line client rects
@@ -55,7 +56,7 @@ export async function renderTextNode(
     ascenderRatio = font.ascender / font.unitsPerEm;
   }
 
-  const lines = getTextLines(textNode, rootRect, ascenderRatio);
+  const lines = getTextLines(textNode, rootRect, ascenderRatio, whiteSpace);
   const textTransform = styles.textTransform;
 
   // Detect text-overflow: ellipsis
@@ -140,7 +141,7 @@ function baselineY(
 }
 
 /** Get per-line text and positions using Range API */
-function getTextLines(textNode: Text, rootRect: DOMRect, ascenderRatio: number = 0.8): TextLine[] {
+function getTextLines(textNode: Text, rootRect: DOMRect, ascenderRatio: number = 0.8, whiteSpace: string = "normal"): TextLine[] {
   const lines: TextLine[] = [];
   const text = textNode.textContent || "";
   if (!text) return lines;
@@ -157,19 +158,29 @@ function getTextLines(textNode: Text, rootRect: DOMRect, ascenderRatio: number =
 
   if (rects.length === 0) return lines;
 
+  // Determine per-line rects. Range.getClientRects() normally returns one
+  // rect per visual line, but in some cases (e.g. text inside flex/grid
+  // columns with overflow clipping) it may return a single bounding rect
+  // even when the text wraps. Detect this by probing character positions.
+  let lineRects: DOMRect[];
+
   if (rects.length === 1) {
     const rect = rects[0]!;
-    lines.push({
-      text,
-      x: rect.left - rootRect.left,
-      y: baselineY(rect.top, rect.height, fontSize, rootRect.top, ascenderRatio),
-    });
-    return lines;
+    if (text.length > 1 && textActuallyWraps(textNode, range, text.length, fontSize)) {
+      lineRects = discoverLineRects(textNode, range, text.length, fontSize);
+    } else {
+      lines.push({
+        text: normalizeWhitespace(text, whiteSpace),
+        x: rect.left - rootRect.left,
+        y: baselineY(rect.top, rect.height, fontSize, rootRect.top, ascenderRatio),
+      });
+      return lines;
+    }
+  } else {
+    lineRects = Array.from(rects);
   }
 
-  // Multi-line: use whole-node rects as line guides, binary search for breakpoints.
-  // This is O(lines * log(n)) instead of O(n) layout queries.
-  const lineRects: DOMRect[] = Array.from(rects);
+  // Multi-line: use line rects as guides, binary search for breakpoints.
   let charStart = 0;
 
   for (let lineIdx = 0; lineIdx < lineRects.length; lineIdx++) {
@@ -180,12 +191,12 @@ function getTextLines(textNode: Text, rootRect: DOMRect, ascenderRatio: number =
     if (isLastLine) {
       charEnd = text.length;
     } else {
-      // Binary search for the first character on the next line
-      const nextTop = lineRects[lineIdx + 1]!.top;
-      charEnd = binarySearchLineBreak(textNode, range, charStart, text.length, nextTop, fontSize);
+      // Binary search for the first character past the current line
+      const currentTop = lineRect.top;
+      charEnd = binarySearchLineBreak(textNode, range, charStart, text.length, currentTop, fontSize);
     }
 
-    const lineText = text.slice(charStart, charEnd);
+    const lineText = normalizeWhitespace(text.slice(charStart, charEnd), whiteSpace);
     if (lineText) {
       lines.push({
         text: lineText,
@@ -199,13 +210,13 @@ function getTextLines(textNode: Text, rootRect: DOMRect, ascenderRatio: number =
   return lines;
 }
 
-/** Binary search for the first character that falls on the next visual line */
+/** Binary search for the first character that falls past the current visual line */
 function binarySearchLineBreak(
   textNode: Text,
   range: Range,
   start: number,
   end: number,
-  nextLineTop: number,
+  currentLineTop: number,
   fontSize: number,
 ): number {
   while (start < end) {
@@ -223,13 +234,80 @@ function binarySearchLineBreak(
       start = mid + 1;
       continue;
     }
-    if (Math.abs(rects[0]!.top - nextLineTop) < fontSize * 0.5) {
-      end = mid; // This char is on the next line, search earlier
+    if (Math.abs(rects[0]!.top - currentLineTop) > fontSize * 0.5) {
+      end = mid; // This char is past the current line, search earlier
     } else {
       start = mid + 1; // Still on current line
     }
   }
   return start;
+}
+
+/** Check if text wraps despite getClientRects() returning a single rect */
+function textActuallyWraps(
+  textNode: Text,
+  range: Range,
+  textLength: number,
+  fontSize: number,
+): boolean {
+  if (textLength <= 1) return false;
+  try {
+    range.setStart(textNode, 0);
+    range.setEnd(textNode, 1);
+    const firstRects = range.getClientRects();
+    range.setStart(textNode, textLength - 1);
+    range.setEnd(textNode, textLength);
+    const lastRects = range.getClientRects();
+    if (firstRects.length > 0 && lastRects.length > 0) {
+      return Math.abs(lastRects[0]!.top - firstRects[0]!.top) > fontSize * 0.5;
+    }
+  } catch {
+    // Ignore errors with multi-byte characters
+  }
+  return false;
+}
+
+/** Discover per-line DOMRects by scanning character positions */
+function discoverLineRects(
+  textNode: Text,
+  range: Range,
+  textLength: number,
+  fontSize: number,
+): DOMRect[] {
+  const lineRects: DOMRect[] = [];
+  let currentLineTop = -Infinity;
+  for (let i = 0; i < textLength; i++) {
+    try {
+      range.setStart(textNode, i);
+      range.setEnd(textNode, i + 1);
+      const charRects = range.getClientRects();
+      if (charRects.length === 0) continue;
+      const charRect = charRects[0]!;
+      if (Math.abs(charRect.top - currentLineTop) > fontSize * 0.5) {
+        lineRects.push(charRect);
+        currentLineTop = charRect.top;
+      }
+    } catch {
+      continue;
+    }
+  }
+  return lineRects;
+}
+
+/**
+ * Normalize text content to match CSS whitespace rendering.
+ * SVG text elements use xml:space="preserve" so we must collapse
+ * whitespace ourselves to match how CSS renders the text.
+ */
+function normalizeWhitespace(text: string, whiteSpace: string): string {
+  const preserves = whiteSpace === "pre" || whiteSpace === "pre-wrap" || whiteSpace === "break-spaces";
+  if (preserves) return text;
+  if (whiteSpace === "pre-line") {
+    // Collapse spaces/tabs but preserve newlines
+    return text.replace(/[^\S\n]+/g, " ");
+  }
+  // white-space: normal | nowrap — collapse all whitespace to single spaces
+  return text.replace(/\s+/g, " ");
 }
 
 /** Apply CSS text-transform to a string */
@@ -255,8 +333,16 @@ function applyTextStyles(
     fill: styles.color,
   });
 
+  // Preserve whitespace so that leading/trailing spaces in normalized text
+  // are rendered (matching CSS's inline whitespace between elements).
+  textEl.setAttribute("xml:space", "preserve");
+
   if (styles.letterSpacing && styles.letterSpacing !== "normal") {
     textEl.setAttribute("letter-spacing", styles.letterSpacing);
+  }
+
+  if (styles.wordSpacing && styles.wordSpacing !== "normal") {
+    textEl.setAttribute("word-spacing", styles.wordSpacing);
   }
 
   if (styles.textDecoration && styles.textDecoration !== "none") {
