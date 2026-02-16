@@ -601,6 +601,172 @@
         linear-gradient(135deg, #1e1b4b, #312e81);
     }
 
+    /* New feature cards */
+    .feat-blur {
+      width: 80px;
+      height: 60px;
+      background: linear-gradient(135deg, #ec4899, #8b5cf6);
+      border-radius: 8px;
+      margin: 0 auto;
+      filter: blur(3px);
+    }
+    .feat-grayscale {
+      width: 80px;
+      height: 60px;
+      background: linear-gradient(135deg, #ef4444, #f59e0b, #22c55e, #3b82f6);
+      border-radius: 8px;
+      margin: 0 auto;
+      filter: grayscale(100%);
+    }
+    .feat-sepia {
+      width: 80px;
+      height: 60px;
+      background: linear-gradient(135deg, #3b82f6, #06b6d4);
+      border-radius: 8px;
+      margin: 0 auto;
+      filter: sepia(80%);
+    }
+    .feat-hue-rotate {
+      width: 80px;
+      height: 60px;
+      background: linear-gradient(135deg, #ef4444, #f59e0b);
+      border-radius: 8px;
+      margin: 0 auto;
+      filter: hue-rotate(180deg);
+    }
+    .feat-brightness-contrast {
+      width: 80px;
+      height: 60px;
+      background: linear-gradient(135deg, #1e40af, #7c3aed);
+      border-radius: 8px;
+      margin: 0 auto;
+      filter: brightness(1.4) contrast(1.3);
+    }
+    .feat-invert {
+      width: 80px;
+      height: 60px;
+      background: linear-gradient(135deg, #1e293b, #334155);
+      border-radius: 8px;
+      margin: 0 auto;
+      filter: invert(1);
+    }
+    .feat-filter-chain {
+      width: 80px;
+      height: 60px;
+      background: linear-gradient(135deg, #ef4444, #8b5cf6);
+      border-radius: 8px;
+      margin: 0 auto;
+      filter: saturate(2) drop-shadow(2px 2px 4px rgba(0,0,0,0.5));
+    }
+    .feat-img {
+      width: 80px;
+      height: 60px;
+      margin: 0 auto;
+    }
+    .feat-img img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+    .feat-img-circle img {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      object-fit: cover;
+      display: block;
+      margin: 0 auto;
+    }
+    .feat-text-decoration span {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 13px;
+    }
+    .feat-dotted {
+      width: 80px;
+      height: 60px;
+      border: 2px dotted #22c55e;
+      border-radius: 6px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      color: #22c55e;
+    }
+    .feat-textarea textarea {
+      width: 100%;
+      font-size: 10px;
+      padding: 4px 6px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 4px;
+      color: #e0e0e0;
+      resize: none;
+    }
+    .feat-ol {
+      text-align: left;
+      padding-left: 24px;
+    }
+    .feat-ol li {
+      font-size: 11px;
+      color: #d4d4d4;
+      margin-bottom: 2px;
+    }
+    .feat-pseudo {
+      position: relative;
+      padding: 8px 12px;
+      font-size: 12px;
+      color: #e0e0e0;
+    }
+    .feat-pseudo-before::before {
+      content: "\2022 ";
+      color: #22c55e;
+      font-weight: 700;
+    }
+    .feat-pseudo-after::after {
+      content: " \2713";
+      color: #3b82f6;
+      font-weight: 700;
+    }
+    .feat-visibility {
+      position: relative;
+      width: 80px;
+      height: 60px;
+      margin: 0 auto;
+    }
+    .feat-visibility .hidden-parent {
+      visibility: hidden;
+      width: 80px;
+      height: 60px;
+      background: #ef4444;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .feat-visibility .visible-child {
+      visibility: visible;
+      background: #22c55e;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      color: white;
+      font-weight: 600;
+    }
+    .feat-clip-ellipse {
+      width: 80px;
+      height: 60px;
+      margin: 0 auto;
+      background: linear-gradient(135deg, #f59e0b, #ef4444);
+      clip-path: ellipse(36px 26px at 40px 30px);
+    }
+    .feat-text-transform {
+      text-align: left;
+      font-size: 11px;
+      line-height: 1.6;
+    }
+
     /* ================= COMPLEX NODE EDITOR ================= */
     .pipeline-editor {
       width: 680px;
@@ -1607,6 +1773,122 @@
           <div class="feature-card">
             <div class="feat-text-shadow">Shadow</div>
             <div class="label">Text Shadow</div>
+          </div>
+
+          <!-- Row: CSS Filters -->
+          <div class="feature-card">
+            <div class="feat-blur"></div>
+            <div class="label">Filter Blur</div>
+          </div>
+          <div class="feature-card">
+            <div class="feat-grayscale"></div>
+            <div class="label">Grayscale</div>
+          </div>
+          <div class="feature-card">
+            <div class="feat-sepia"></div>
+            <div class="label">Sepia</div>
+          </div>
+          <div class="feature-card">
+            <div class="feat-hue-rotate"></div>
+            <div class="label">Hue Rotate</div>
+          </div>
+          <div class="feature-card">
+            <div class="feat-brightness-contrast"></div>
+            <div class="label">Bright + Contrast</div>
+          </div>
+          <div class="feature-card">
+            <div class="feat-invert"></div>
+            <div class="label">Invert</div>
+          </div>
+          <div class="feature-card">
+            <div class="feat-filter-chain"></div>
+            <div class="label">Filter Chain</div>
+          </div>
+
+          <!-- Image -->
+          <div class="feature-card">
+            <div class="feat-img">
+              <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='60'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%2306b6d4'/%3E%3Cstop offset='100%25' stop-color='%238b5cf6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='80' height='60' fill='url(%23g)'/%3E%3Ccircle cx='55' cy='18' r='12' fill='%23fbbf24' opacity='0.9'/%3E%3Crect x='10' y='35' width='35' height='15' rx='4' fill='white' opacity='0.3'/%3E%3C/svg%3E" alt="demo" />
+            </div>
+            <div class="label">Image</div>
+          </div>
+
+          <!-- Circular image -->
+          <div class="feature-card">
+            <div class="feat-img-circle">
+              <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56'%3E%3Crect width='56' height='56' fill='%23ec4899'/%3E%3Ctext x='28' y='33' text-anchor='middle' font-size='20' fill='white' font-family='sans-serif'%3EAB%3C/text%3E%3C/svg%3E" alt="avatar" />
+            </div>
+            <div class="label">Circular Image</div>
+          </div>
+
+          <!-- Text decoration -->
+          <div class="feature-card">
+            <div class="feat-text-decoration">
+              <span style="text-decoration:underline;color:#3b82f6;">Underline</span>
+              <span style="text-decoration:line-through;color:#ef4444;">Strikethrough</span>
+            </div>
+            <div class="label">Text Decoration</div>
+          </div>
+
+          <!-- Dotted border -->
+          <div class="feature-card">
+            <div class="feat-dotted">dotted</div>
+            <div class="label">Dotted Border</div>
+          </div>
+
+          <!-- Textarea -->
+          <div class="feature-card">
+            <div class="feat-textarea">
+              <textarea rows="3">Multi-line
+text area
+content</textarea>
+            </div>
+            <div class="label">Textarea</div>
+          </div>
+
+          <!-- Ordered list -->
+          <div class="feature-card">
+            <ol class="feat-ol">
+              <li>First item</li>
+              <li>Second item</li>
+              <li>Third item</li>
+            </ol>
+            <div class="label">Ordered List</div>
+          </div>
+
+          <!-- Pseudo-elements -->
+          <div class="feature-card">
+            <div class="feat-pseudo">
+              <div class="feat-pseudo-before">Before</div>
+              <div class="feat-pseudo-after">After</div>
+            </div>
+            <div class="label">Pseudo Elements</div>
+          </div>
+
+          <!-- Visibility hidden + visible child -->
+          <div class="feature-card">
+            <div class="feat-visibility">
+              <div class="hidden-parent">
+                <div class="visible-child">visible</div>
+              </div>
+            </div>
+            <div class="label">Visibility</div>
+          </div>
+
+          <!-- Clip-path ellipse -->
+          <div class="feature-card">
+            <div class="feat-clip-ellipse"></div>
+            <div class="label">Clip Ellipse</div>
+          </div>
+
+          <!-- Text transform -->
+          <div class="feature-card">
+            <div class="feat-text-transform">
+              <div style="text-transform:uppercase;color:#3b82f6;">upper</div>
+              <div style="text-transform:lowercase;color:#22c55e;">LOWER</div>
+              <div style="text-transform:capitalize;color:#f59e0b;">hello world</div>
+            </div>
+            <div class="label">Text Transform</div>
           </div>
         </div>
       </div>
