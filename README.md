@@ -24,6 +24,44 @@ Real-world UI components (stat cards, avatars, alerts, buttons, progress bars, c
 npm install github:milanofthe/dom2svg
 ```
 
+## CLI — Vector Screenshots
+
+Capture any web page as a vector SVG from the command line. Uses headless Chrome via Puppeteer to load the page, then runs dom2svg against it.
+
+Requires Chrome/Chromium installed locally. Puppeteer-core is included as a dev dependency.
+
+```bash
+# Full page
+npx dom2svg https://example.com -o page.svg
+
+# Specific element with background and padding
+npx dom2svg https://news.ycombinator.com -s "#hnmain" -b white -p 12 -o hn.svg
+
+# Pipe to stdout
+npx dom2svg https://example.com > page.svg
+
+# Wait for JS-rendered content
+npx dom2svg https://app.example.com --wait 3000 -o app.svg
+
+# Custom viewport size
+npx dom2svg https://example.com --width 1920 --height 1080 -o wide.svg
+```
+
+**Options:**
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `-o, --output <file>` | Output file (default: stdout) | stdout |
+| `-s, --selector <css>` | CSS selector for target element | `body` |
+| `-b, --background <color>` | SVG background color | transparent |
+| `-p, --padding <px>` | Padding around the element | `0` |
+| `--width <px>` | Viewport width | `1280` |
+| `--height <px>` | Viewport height | `800` |
+| `--wait <ms>` | Extra wait after page load | `0` |
+| `--chrome <path>` | Chrome executable path | auto-detect |
+
+Chrome is auto-detected on Windows, macOS, and Linux. Override with `--chrome` or the `CHROME_PATH` environment variable.
+
 ## Quick Start
 
 ```ts
@@ -277,11 +315,13 @@ src/
 
 Single runtime dependency: [opentype.js](https://github.com/opentypejs/opentype.js) (only used when `textToPath` is enabled).
 
+The CLI additionally uses [puppeteer-core](https://pptr.dev/) for headless Chrome automation.
+
 ## Development
 
 ```bash
 npm install
-npm run build        # ESM + CJS bundles via tsup
+npm run build        # ESM + CJS + CLI bundles via tsup
 npm run type-check   # TypeScript strict mode
 npm run test         # 162 unit tests via Vitest
 npm run test:watch   # Watch mode
