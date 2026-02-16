@@ -555,26 +555,57 @@ function renderFormContent(
 
   const fontSize = parseFloat(styles.fontSize) || 16;
   const paddingLeft = parseFloat(styles.paddingLeft) || 0;
+  const paddingTop = parseFloat(styles.paddingTop) || 0;
   const borderTop = parseFloat(styles.borderTopWidth) || 0;
-  const borderBottom = parseFloat(styles.borderBottomWidth) || 0;
+  const lineHeight = parseFloat(styles.lineHeight) || fontSize * 1.2;
 
-  // Vertically center text within the control (inner height minus borders)
+  const fillColor = isPlaceholder ? "gray" : styles.color;
+  const textX = box.x + paddingLeft;
+
+  // Textarea: render each line separately
+  if (element instanceof HTMLTextAreaElement) {
+    const lines = text.split("\n");
+    for (let i = 0; i < lines.length; i++) {
+      const lineText = lines[i]!;
+      if (!lineText) continue;
+
+      const topPadding = (lineHeight - fontSize) / 2;
+      const y = box.y + borderTop + paddingTop + i * lineHeight + topPadding + fontSize * 0.8;
+
+      const textEl = createSvgElement(ctx.svgDocument, "text");
+      setAttributes(textEl, {
+        x: textX.toFixed(2),
+        y: y.toFixed(2),
+        "font-family": styles.fontFamily,
+        "font-size": styles.fontSize,
+        "font-weight": styles.fontWeight,
+        "font-style": styles.fontStyle,
+        fill: fillColor,
+      });
+      if (isPlaceholder) textEl.setAttribute("opacity", "0.54");
+      textEl.textContent = lineText;
+      group.appendChild(textEl);
+    }
+    return;
+  }
+
+  // Single-line inputs and selects: vertically centered
+  const borderBottom = parseFloat(styles.borderBottomWidth) || 0;
   const innerHeight = box.height - borderTop - borderBottom;
   const baselineY = box.y + borderTop + innerHeight / 2 + fontSize * 0.35;
 
   const textEl = createSvgElement(ctx.svgDocument, "text");
   setAttributes(textEl, {
-    x: (box.x + paddingLeft).toFixed(2),
+    x: textX.toFixed(2),
     y: baselineY.toFixed(2),
     "font-family": styles.fontFamily,
     "font-size": styles.fontSize,
     "font-weight": styles.fontWeight,
     "font-style": styles.fontStyle,
-    fill: isPlaceholder ? (styles.caretColor !== "auto" ? styles.caretColor : "gray") : styles.color,
+    fill: fillColor,
   });
 
   if (isPlaceholder) {
-    // Use placeholder color (approximation — actual ::placeholder is hard to read)
     textEl.setAttribute("opacity", "0.54");
   }
 
