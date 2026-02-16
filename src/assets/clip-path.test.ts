@@ -49,4 +49,52 @@ describe("parseClipPath", () => {
     const result = parseClipPath("inset(10px 20px)");
     expect(result).toEqual({ type: "inset", top: 10, right: 20, bottom: 10, left: 20 });
   });
+
+  it("parses circle() with percentage center", () => {
+    const result = parseClipPath("circle(50px at 50% 50%)");
+    expect(result).toEqual({ type: "circle", radius: 50, cx: 50, cy: 50, cxPct: true, cyPct: true });
+  });
+
+  it("parses circle() without at (defaults to 50% 50%)", () => {
+    const result = parseClipPath("circle(30px)");
+    expect(result).toEqual({ type: "circle", radius: 30, cx: 50, cy: 50, cxPct: true, cyPct: true });
+  });
+
+  it("parses ellipse() with percentage center", () => {
+    const result = parseClipPath("ellipse(80px 40px at 50% 50%)");
+    expect(result).toEqual({ type: "ellipse", rx: 80, ry: 40, cx: 50, cy: 50, cxPct: true, cyPct: true });
+  });
+
+  it("parses ellipse() without at (defaults to 50% 50%)", () => {
+    const result = parseClipPath("ellipse(60px 30px)");
+    expect(result).toEqual({ type: "ellipse", rx: 60, ry: 30, cx: 50, cy: 50, cxPct: true, cyPct: true });
+  });
+
+  it("parses circle() with mixed px and % center", () => {
+    const result = parseClipPath("circle(25px at 100px 50%)");
+    expect(result).toEqual({ type: "circle", radius: 25, cx: 100, cy: 50, cxPct: false, cyPct: true });
+  });
+
+  it("parses polygon() with evenodd fill-rule", () => {
+    const result = parseClipPath("polygon(evenodd, 0px 0px, 100px 0px, 100px 100px, 0px 100px)");
+    expect(result).toEqual({
+      type: "polygon",
+      points: [[0, 0], [100, 0], [100, 100], [0, 100]],
+    });
+  });
+
+  it("parses inset() with three values", () => {
+    const result = parseClipPath("inset(10px 20px 30px)");
+    expect(result).toEqual({ type: "inset", top: 10, right: 20, bottom: 30, left: 20 });
+  });
+
+  it("returns null for polygon with less than 3 points", () => {
+    const result = parseClipPath("polygon(0px 0px, 100px 100px)");
+    expect(result).toBeNull();
+  });
+
+  it("returns null for unknown function", () => {
+    const result = parseClipPath("rect(0px 100px 100px 0px)");
+    expect(result).toBeNull();
+  });
 });

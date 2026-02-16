@@ -1139,6 +1139,233 @@
       width: fit-content;
       justify-self: end;
     }
+
+    /* Notification Toast */
+    .rw-toast {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 12px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    .rw-toast-icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #22c55e;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      color: white;
+      flex-shrink: 0;
+    }
+    .rw-toast-body {
+      flex: 1;
+      min-width: 0;
+    }
+    .rw-toast-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #e2e8f0;
+    }
+    .rw-toast-msg {
+      font-size: 10px;
+      color: #94a3b8;
+      margin-top: 2px;
+      line-height: 1.3;
+    }
+    .rw-toast-time {
+      font-size: 9px;
+      color: #475569;
+      flex-shrink: 0;
+    }
+
+    /* Tag List */
+    .rw-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .rw-tag {
+      font-size: 10px;
+      font-weight: 500;
+      padding: 3px 10px;
+      border-radius: 999px;
+      border: 1px solid;
+    }
+    .rw-tag-blue { color: #60a5fa; border-color: rgba(96, 165, 250, 0.3); background: rgba(96, 165, 250, 0.08); }
+    .rw-tag-green { color: #4ade80; border-color: rgba(74, 222, 128, 0.3); background: rgba(74, 222, 128, 0.08); }
+    .rw-tag-purple { color: #c084fc; border-color: rgba(192, 132, 252, 0.3); background: rgba(192, 132, 252, 0.08); }
+    .rw-tag-red { color: #f87171; border-color: rgba(248, 113, 113, 0.3); background: rgba(248, 113, 113, 0.08); }
+
+    /* Toggle Switch */
+    .rw-toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .rw-toggle-label {
+      font-size: 11px;
+      color: #cbd5e1;
+    }
+    .rw-toggle-sublabel {
+      font-size: 9px;
+      color: #64748b;
+      margin-top: 1px;
+    }
+    .rw-toggle {
+      width: 36px;
+      height: 20px;
+      background: #22c55e;
+      border-radius: 10px;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .rw-toggle-knob {
+      width: 16px;
+      height: 16px;
+      background: white;
+      border-radius: 50%;
+      position: absolute;
+      top: 2px;
+      left: 18px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+    .rw-toggle-off {
+      background: #475569;
+    }
+    .rw-toggle-off .rw-toggle-knob {
+      left: 2px;
+    }
+
+    /* Data Table */
+    .rw-data-table {
+      width: 100%;
+      font-size: 10px;
+    }
+    .rw-dt-header {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 4px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #334155;
+      margin-bottom: 4px;
+    }
+    .rw-dt-header span {
+      color: #64748b;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 9px;
+    }
+    .rw-dt-row {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 4px;
+      padding: 4px 0;
+      color: #cbd5e1;
+    }
+    .rw-dt-row + .rw-dt-row {
+      border-top: 1px solid rgba(51, 65, 85, 0.5);
+    }
+    .rw-dt-dim { color: #64748b; }
+    .rw-dt-num { text-align: right; font-variant-numeric: tabular-nums; }
+
+    /* Breadcrumb */
+    .rw-breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+    }
+    .rw-breadcrumb-item {
+      color: #64748b;
+    }
+    .rw-breadcrumb-active {
+      color: #e2e8f0;
+      font-weight: 600;
+    }
+    .rw-breadcrumb-sep {
+      color: #475569;
+      font-size: 10px;
+    }
+
+    /* Donut Chart */
+    .rw-donut-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .rw-donut-legend {
+      font-size: 9px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .rw-donut-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      color: #94a3b8;
+    }
+    .rw-donut-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* Skeleton Loader */
+    .rw-skeleton {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+    .rw-skel-circle {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(90deg, #1e293b 0%, #334155 50%, #1e293b 100%);
+      flex-shrink: 0;
+    }
+    .rw-skel-lines {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .rw-skel-line {
+      height: 8px;
+      border-radius: 4px;
+      background: linear-gradient(90deg, #1e293b 0%, #334155 50%, #1e293b 100%);
+    }
+
+    /* KBD / Shortcut */
+    .rw-shortcut {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: #94a3b8;
+    }
+    .rw-kbd {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 22px;
+      height: 22px;
+      padding: 0 6px;
+      background: #1e293b;
+      border: 1px solid #475569;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      color: #cbd5e1;
+      box-shadow: 0 1px 0 #0f172a;
+    }
   </style>
 </head>
 <body>
@@ -1521,6 +1748,126 @@
               <div class="rw-table-cell">user_sessions</div>
               <div class="rw-table-cell-dim">1.2k rows</div>
               <div class="rw-table-badge">Active</div>
+            </div>
+          </div>
+
+          <!-- Notification Toast -->
+          <div class="rw-card" style="padding:0;">
+            <div class="rw-toast">
+              <div class="rw-toast-icon">&#10003;</div>
+              <div class="rw-toast-body">
+                <div class="rw-toast-title">Deployment successful</div>
+                <div class="rw-toast-msg">v2.4.1 deployed to production in 12s</div>
+              </div>
+              <div class="rw-toast-time">2m ago</div>
+            </div>
+          </div>
+
+          <!-- Tag List -->
+          <div class="rw-card">
+            <div class="rw-tags">
+              <div class="rw-tag rw-tag-blue">React</div>
+              <div class="rw-tag rw-tag-green">Node.js</div>
+              <div class="rw-tag rw-tag-purple">GraphQL</div>
+              <div class="rw-tag rw-tag-red">Redis</div>
+            </div>
+          </div>
+
+          <!-- Toggle Switches -->
+          <div class="rw-card" style="display:flex;flex-direction:column;gap:10px;">
+            <div class="rw-toggle-row">
+              <div>
+                <div class="rw-toggle-label">Notifications</div>
+                <div class="rw-toggle-sublabel">Push &amp; email</div>
+              </div>
+              <div class="rw-toggle"><div class="rw-toggle-knob"></div></div>
+            </div>
+            <div class="rw-toggle-row">
+              <div>
+                <div class="rw-toggle-label">Dark mode</div>
+                <div class="rw-toggle-sublabel">System default</div>
+              </div>
+              <div class="rw-toggle rw-toggle-off"><div class="rw-toggle-knob"></div></div>
+            </div>
+          </div>
+
+          <!-- Data Table -->
+          <div class="rw-card" style="padding:10px 12px;">
+            <div class="rw-data-table">
+              <div class="rw-dt-header">
+                <span>Endpoint</span>
+                <span>Latency</span>
+                <span style="text-align:right;">Calls</span>
+              </div>
+              <div class="rw-dt-row">
+                <div>/api/users</div>
+                <div class="rw-dt-dim">42ms</div>
+                <div class="rw-dt-num">8.2k</div>
+              </div>
+              <div class="rw-dt-row">
+                <div>/api/auth</div>
+                <div class="rw-dt-dim">18ms</div>
+                <div class="rw-dt-num">3.1k</div>
+              </div>
+              <div class="rw-dt-row">
+                <div>/api/search</div>
+                <div class="rw-dt-dim">156ms</div>
+                <div class="rw-dt-num">1.4k</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Breadcrumb -->
+          <div class="rw-card" style="display:flex;align-items:center;">
+            <div class="rw-breadcrumb">
+              <span class="rw-breadcrumb-item">Home</span>
+              <span class="rw-breadcrumb-sep">/</span>
+              <span class="rw-breadcrumb-item">Settings</span>
+              <span class="rw-breadcrumb-sep">/</span>
+              <span class="rw-breadcrumb-active">Profile</span>
+            </div>
+          </div>
+
+          <!-- Donut Chart (inline SVG) -->
+          <div class="rw-card">
+            <div class="rw-donut-wrap">
+              <svg width="48" height="48" viewBox="0 0 36 36">
+                <circle cx="18" cy="18" r="14" fill="none" stroke="#1e293b" stroke-width="5"/>
+                <circle cx="18" cy="18" r="14" fill="none" stroke="#3b82f6" stroke-width="5"
+                  stroke-dasharray="55 45" stroke-dashoffset="25" stroke-linecap="round"/>
+                <circle cx="18" cy="18" r="14" fill="none" stroke="#8b5cf6" stroke-width="5"
+                  stroke-dasharray="25 75" stroke-dashoffset="70" stroke-linecap="round"/>
+                <circle cx="18" cy="18" r="14" fill="none" stroke="#22c55e" stroke-width="5"
+                  stroke-dasharray="20 80" stroke-dashoffset="45" stroke-linecap="round"/>
+              </svg>
+              <div class="rw-donut-legend">
+                <div class="rw-donut-item"><div class="rw-donut-dot" style="background:#3b82f6;"></div>API 55%</div>
+                <div class="rw-donut-item"><div class="rw-donut-dot" style="background:#8b5cf6;"></div>Web 25%</div>
+                <div class="rw-donut-item"><div class="rw-donut-dot" style="background:#22c55e;"></div>SDK 20%</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Skeleton Loader -->
+          <div class="rw-card">
+            <div class="rw-skeleton">
+              <div class="rw-skel-circle"></div>
+              <div class="rw-skel-lines">
+                <div class="rw-skel-line" style="width:70%;"></div>
+                <div class="rw-skel-line" style="width:100%;"></div>
+                <div class="rw-skel-line" style="width:40%;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Keyboard Shortcut -->
+          <div class="rw-card" style="display:flex;align-items:center;justify-content:center;">
+            <div class="rw-shortcut">
+              <span class="rw-kbd">Ctrl</span>
+              <span>+</span>
+              <span class="rw-kbd">Shift</span>
+              <span>+</span>
+              <span class="rw-kbd">P</span>
             </div>
           </div>
         </div>

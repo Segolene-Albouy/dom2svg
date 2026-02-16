@@ -75,4 +75,44 @@ describe("parseBoxShadows", () => {
       color: "rgba(0, 0, 0, 0.3)",
     });
   });
+
+  it("parses inset shadow (suffix)", () => {
+    const result = parseBoxShadows("0 2px 4px rgba(0, 0, 0, 0.2) inset");
+    expect(result).toHaveLength(1);
+    expect(result[0]!.inset).toBe(true);
+  });
+
+  it("parses three shadows", () => {
+    const result = parseBoxShadows("1px 1px red, 2px 2px green, 3px 3px blue");
+    expect(result).toHaveLength(3);
+    expect(result[0]!.color).toBe("red");
+    expect(result[1]!.color).toBe("green");
+    expect(result[2]!.color).toBe("blue");
+  });
+
+  it("handles zero offset and zero blur", () => {
+    const result = parseBoxShadows("0 0 0 4px #3b82f6");
+    expect(result).toHaveLength(1);
+    expect(result[0]!.offsetX).toBe(0);
+    expect(result[0]!.offsetY).toBe(0);
+    expect(result[0]!.blur).toBe(0);
+    expect(result[0]!.spread).toBe(4);
+    expect(result[0]!.color).toBe("#3b82f6");
+  });
+
+  it("parses decimal spread and blur values", () => {
+    const result = parseBoxShadows("0.5px 1.5px 2.5px 0.5px black");
+    expect(result).toHaveLength(1);
+    expect(result[0]!.offsetX).toBeCloseTo(0.5);
+    expect(result[0]!.offsetY).toBeCloseTo(1.5);
+    expect(result[0]!.blur).toBeCloseTo(2.5);
+    expect(result[0]!.spread).toBeCloseTo(0.5);
+  });
+
+  it("parses mixed inset and outer shadows", () => {
+    const result = parseBoxShadows("2px 2px 4px red, inset 0 0 8px blue");
+    expect(result).toHaveLength(2);
+    expect(result[0]!.inset).toBe(false);
+    expect(result[1]!.inset).toBe(true);
+  });
 });

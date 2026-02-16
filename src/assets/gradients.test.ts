@@ -81,4 +81,47 @@ describe("parseLinearGradient", () => {
     expect(result!.stops[0]!.color).toBe("rgba(255, 0, 0, 0.5)");
     expect(result!.stops[0]!.position).toBe(0.5);
   });
+
+  it("parses to left direction", () => {
+    const result = parseLinearGradient("linear-gradient(to left, red, blue)");
+    expect(result!.angle).toBe(270);
+  });
+
+  it("parses to top left direction", () => {
+    const result = parseLinearGradient("linear-gradient(to top left, red, blue)");
+    expect(result!.angle).toBe(315);
+  });
+
+  it("parses three-color gradient with even distribution", () => {
+    const result = parseLinearGradient("linear-gradient(red, green, blue)");
+    expect(result).not.toBeNull();
+    expect(result!.stops).toHaveLength(3);
+    expect(result!.stops[0]!.position).toBe(0);
+    expect(result!.stops[1]!.position).toBe(0.5);
+    expect(result!.stops[2]!.position).toBe(1);
+  });
+
+  it("parses gradient with negative angle", () => {
+    const result = parseLinearGradient("linear-gradient(-45deg, red, blue)");
+    expect(result).not.toBeNull();
+    expect(result!.angle).toBe(-45);
+  });
+
+  it("returns null for radial-gradient", () => {
+    expect(parseLinearGradient("radial-gradient(circle, red, blue)")).toBeNull();
+  });
+
+  it("returns null for conic-gradient", () => {
+    expect(parseLinearGradient("conic-gradient(red, blue)")).toBeNull();
+  });
+
+  it("parses 0deg direction (to top)", () => {
+    const result = parseLinearGradient("linear-gradient(0deg, red, blue)");
+    expect(result!.angle).toBe(0);
+  });
+
+  it("returns null for single stop (requires at least 2 color stops)", () => {
+    const result = parseLinearGradient("linear-gradient(red)");
+    expect(result).toBeNull();
+  });
 });

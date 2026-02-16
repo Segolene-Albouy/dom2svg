@@ -54,4 +54,34 @@ describe("parseTextShadows", () => {
     expect(result[0]!.offsetX).toBe(-2);
     expect(result[0]!.offsetY).toBe(-3);
   });
+
+  it("parses three shadows", () => {
+    const result = parseTextShadows("1px 1px red, 2px 2px green, 3px 3px blue");
+    expect(result).toHaveLength(3);
+    expect(result[0]!.color).toBe("red");
+    expect(result[1]!.color).toBe("green");
+    expect(result[2]!.color).toBe("blue");
+  });
+
+  it("handles zero values", () => {
+    const result = parseTextShadows("0 0 0 black");
+    expect(result).toHaveLength(1);
+    expect(result[0]!.offsetX).toBe(0);
+    expect(result[0]!.offsetY).toBe(0);
+    expect(result[0]!.blur).toBe(0);
+  });
+
+  it("parses shadow with rgb color", () => {
+    const result = parseTextShadows("1px 1px 2px rgb(255, 128, 0)");
+    expect(result).toHaveLength(1);
+    expect(result[0]!.color).toBe("rgb(255, 128, 0)");
+  });
+
+  it("handles decimal blur values", () => {
+    const result = parseTextShadows("0.5px 1.5px 2.5px black");
+    expect(result).toHaveLength(1);
+    expect(result[0]!.offsetX).toBeCloseTo(0.5);
+    expect(result[0]!.offsetY).toBeCloseTo(1.5);
+    expect(result[0]!.blur).toBeCloseTo(2.5);
+  });
 });

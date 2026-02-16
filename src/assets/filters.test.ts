@@ -129,4 +129,44 @@ describe("parseCssFilterFunctions", () => {
     expect(result[0]).toEqual({ name: "sepia", args: "0.5" });
     expect(result[1]).toEqual({ name: "invert", args: "1" });
   });
+
+  it("returns empty for empty string", () => {
+    expect(parseCssFilterFunctions("")).toEqual([]);
+  });
+
+  it("parses saturate with percentage", () => {
+    const result = parseCssFilterFunctions("saturate(200%)");
+    expect(result).toEqual([{ name: "saturate", args: "200%" }]);
+  });
+
+  it("parses opacity filter", () => {
+    const result = parseCssFilterFunctions("opacity(50%)");
+    expect(result).toEqual([{ name: "opacity", args: "50%" }]);
+  });
+
+  it("parses brightness with percentage", () => {
+    const result = parseCssFilterFunctions("brightness(150%)");
+    expect(result).toEqual([{ name: "brightness", args: "150%" }]);
+  });
+
+  it("parses contrast", () => {
+    const result = parseCssFilterFunctions("contrast(0.5)");
+    expect(result).toEqual([{ name: "contrast", args: "0.5" }]);
+  });
+
+  it("parses complex chain of all filter types", () => {
+    const result = parseCssFilterFunctions(
+      "blur(2px) brightness(1.2) contrast(0.9) grayscale(10%) hue-rotate(45deg) invert(0.1) opacity(0.8) saturate(1.5) sepia(0.2) drop-shadow(2px 2px 4px black)"
+    );
+    expect(result).toHaveLength(10);
+    expect(result.map(f => f.name)).toEqual([
+      "blur", "brightness", "contrast", "grayscale", "hue-rotate",
+      "invert", "opacity", "saturate", "sepia", "drop-shadow",
+    ]);
+  });
+
+  it("handles filter names case-insensitively", () => {
+    const result = parseCssFilterFunctions("Blur(5px)");
+    expect(result).toEqual([{ name: "blur", args: "5px" }]);
+  });
 });

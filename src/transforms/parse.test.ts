@@ -72,4 +72,49 @@ describe("parseTransform", () => {
     expect(result[1]!.type).toBe("rotate");
     expect(result[2]!.type).toBe("scale");
   });
+
+  it("parses scaleX", () => {
+    const result = parseTransform("scaleX(2)");
+    expect(result).toEqual([{ type: "scale", x: 2, y: 1 }]);
+  });
+
+  it("parses scaleY", () => {
+    const result = parseTransform("scaleY(0.5)");
+    expect(result).toEqual([{ type: "scale", x: 1, y: 0.5 }]);
+  });
+
+  it("parses rotate with no unit (assumes degrees)", () => {
+    const result = parseTransform("rotate(90)");
+    expect(result[0]!.type).toBe("rotate");
+    expect((result[0] as any).angle).toBe(90);
+  });
+
+  it("parses matrix with decimal values", () => {
+    const result = parseTransform("matrix(0.866, 0.5, -0.5, 0.866, 0, 0)");
+    expect(result).toHaveLength(1);
+    expect(result[0]!.type).toBe("matrix");
+    expect((result[0] as any).values[0]).toBeCloseTo(0.866);
+    expect((result[0] as any).values[1]).toBeCloseTo(0.5);
+  });
+
+  it("parses translate with negative values", () => {
+    const result = parseTransform("translate(-10px, -20px)");
+    expect(result).toEqual([{ type: "translate", x: -10, y: -20 }]);
+  });
+
+  it("handles whitespace between transform functions", () => {
+    const result = parseTransform("  translate(10px, 0px)   rotate(45deg)  ");
+    expect(result).toHaveLength(2);
+  });
+
+  it("skew(x, y) is not supported (browsers decompose to matrix)", () => {
+    const result = parseTransform("skew(10deg, 20deg)");
+    expect(result).toHaveLength(0);
+  });
+
+  it("parses rotate in turns", () => {
+    const result = parseTransform("rotate(0.25turn)");
+    expect(result[0]!.type).toBe("rotate");
+    expect((result[0] as any).angle).toBeCloseTo(90, 0);
+  });
 });
