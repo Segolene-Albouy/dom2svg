@@ -66,8 +66,8 @@ describe("isInvisible", () => {
     expect(isInvisible(mockStyles({ visibility: "hidden" }))).toBe(false);
   });
 
-  it("returns true for opacity: 0", () => {
-    expect(isInvisible(mockStyles({ opacity: "0" }))).toBe(true);
+  it("returns false for opacity: 0 (subtree still rendered with opacity attribute)", () => {
+    expect(isInvisible(mockStyles({ opacity: "0" }))).toBe(false);
   });
 
   it("returns false for visible element", () => {

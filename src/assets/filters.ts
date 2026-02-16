@@ -28,7 +28,7 @@ export function createDropShadowFilter(
   setAttributes(feDropShadow, {
     dx: parsed.offsetX,
     dy: parsed.offsetY,
-    stdDeviation: parsed.blur,
+    stdDeviation: parsed.blur / 2,
     "flood-color": parsed.color,
     "flood-opacity": 1,
   });

@@ -19,12 +19,12 @@ describe("parseClipPath", () => {
 
   it("parses circle()", () => {
     const result = parseClipPath("circle(50px at 100px 100px)");
-    expect(result).toEqual({ type: "circle", radius: 50, cx: 100, cy: 100 });
+    expect(result).toEqual({ type: "circle", radius: 50, cx: 100, cy: 100, cxPct: false, cyPct: false });
   });
 
   it("parses ellipse()", () => {
     const result = parseClipPath("ellipse(100px 50px at 150px 75px)");
-    expect(result).toEqual({ type: "ellipse", rx: 100, ry: 50, cx: 150, cy: 75 });
+    expect(result).toEqual({ type: "ellipse", rx: 100, ry: 50, cx: 150, cy: 75, cxPct: false, cyPct: false });
   });
 
   it("parses polygon()", () => {

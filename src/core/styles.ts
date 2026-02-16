@@ -1,8 +1,8 @@
 import type { BorderSide, Borders, BorderRadii } from "../types.js";
 
-/** Check if an element's entire subtree should be skipped (display:none, opacity:0) */
+/** Check if an element's entire subtree should be skipped (display:none) */
 export function isInvisible(styles: CSSStyleDeclaration): boolean {
-  return styles.display === "none" || styles.opacity === "0";
+  return styles.display === "none";
 }
 
 /** Check if element's own visuals are hidden (children may still be visible) */

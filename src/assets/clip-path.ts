@@ -4,14 +4,23 @@ import { buildRoundedRectPath } from "../utils/geometry.js";
 
 export type ClipPathShape =
   | { type: "inset"; top: number; right: number; bottom: number; left: number; round?: string }
-  | { type: "circle"; radius: number; cx: number; cy: number }
-  | { type: "ellipse"; rx: number; ry: number; cx: number; cy: number }
+  | { type: "circle"; radius: number; cx: number; cy: number; cxPct?: boolean; cyPct?: boolean }
+  | { type: "ellipse"; rx: number; ry: number; cx: number; cy: number; cxPct?: boolean; cyPct?: boolean }
   | { type: "polygon"; points: [number, number][] }
   | { type: "path"; d: string };
 
+/** Parse a CSS length value, detecting percentage vs pixel units */
+function parseLengthValue(raw: string): { value: number; isPct: boolean } {
+  const trimmed = raw.trim();
+  if (trimmed.endsWith("%")) {
+    return { value: parseFloat(trimmed) || 0, isPct: true };
+  }
+  return { value: parseFloat(trimmed) || 0, isPct: false };
+}
+
 /**
  * Parse a CSS clip-path value into a ClipPathShape.
- * Expects computed (resolved) values — browser resolves percentages to pixels.
+ * Handles both pixel and percentage values (browser may keep center positions as %).
  */
 export function parseClipPath(value: string): ClipPathShape | null {
   if (!value || value === "none") return null;
@@ -59,17 +68,24 @@ function parseCircle(args: string): ClipPathShape | null {
   let radius = 0;
   let cx = 0;
   let cy = 0;
+  let cxPct = false;
+  let cyPct = false;
 
   if (atIdx >= 0) {
     radius = parseFloat(args.slice(0, atIdx)) || 0;
     const center = args.slice(atIdx + 4).trim().split(/\s+/);
-    cx = parseFloat(center[0]!) || 0;
-    cy = parseFloat(center[1]!) || 0;
+    const cxVal = parseLengthValue(center[0]!);
+    const cyVal = parseLengthValue(center[1]!);
+    cx = cxVal.value; cxPct = cxVal.isPct;
+    cy = cyVal.value; cyPct = cyVal.isPct;
   } else {
     radius = parseFloat(args) || 0;
+    // CSS spec: default center is 50% 50%
+    cx = 50; cy = 50;
+    cxPct = true; cyPct = true;
   }
 
-  return { type: "circle", radius, cx, cy };
+  return { type: "circle", radius, cx, cy, cxPct, cyPct };
 }
 
 function parseEllipse(args: string): ClipPathShape | null {
@@ -79,21 +95,28 @@ function parseEllipse(args: string): ClipPathShape | null {
   let ry = 0;
   let cx = 0;
   let cy = 0;
+  let cxPct = false;
+  let cyPct = false;
 
   if (atIdx >= 0) {
     const radii = args.slice(0, atIdx).trim().split(/\s+/);
     rx = parseFloat(radii[0]!) || 0;
     ry = parseFloat(radii[1]!) || 0;
     const center = args.slice(atIdx + 4).trim().split(/\s+/);
-    cx = parseFloat(center[0]!) || 0;
-    cy = parseFloat(center[1]!) || 0;
+    const cxVal = parseLengthValue(center[0]!);
+    const cyVal = parseLengthValue(center[1]!);
+    cx = cxVal.value; cxPct = cxVal.isPct;
+    cy = cyVal.value; cyPct = cyVal.isPct;
   } else {
     const parts = args.trim().split(/\s+/);
     rx = parseFloat(parts[0]!) || 0;
     ry = parseFloat(parts[1]!) || 0;
+    // CSS spec: default center is 50% 50%
+    cx = 50; cy = 50;
+    cxPct = true; cyPct = true;
   }
 
-  return { type: "ellipse", rx, ry, cx, cy };
+  return { type: "ellipse", rx, ry, cx, cy, cxPct, cyPct };
 }
 
 function parsePolygon(args: string): ClipPathShape | null {
@@ -126,16 +149,16 @@ export function createSvgClipPath(
   shape: ClipPathShape,
   box: BoxGeometry,
   ctx: RenderContext,
-): string {
+): string | null {
   const clipId = ctx.idGenerator.next("clip");
   const clipPath = createSvgElement(ctx.svgDocument, "clipPath");
   clipPath.setAttribute("id", clipId);
 
   const svgShape = shapeToSvg(shape, box, ctx);
-  if (svgShape) {
-    clipPath.appendChild(svgShape);
-    ctx.defs.appendChild(clipPath);
-  }
+  if (!svgShape) return null;
+
+  clipPath.appendChild(svgShape);
+  ctx.defs.appendChild(clipPath);
 
   return clipId;
 }
@@ -178,20 +201,24 @@ function shapeToSvg(
     }
 
     case "circle": {
+      const resolvedCx = shape.cxPct ? (shape.cx / 100) * box.width : shape.cx;
+      const resolvedCy = shape.cyPct ? (shape.cy / 100) * box.height : shape.cy;
       const circle = createSvgElement(ctx.svgDocument, "circle");
       setAttributes(circle, {
-        cx: box.x + shape.cx,
-        cy: box.y + shape.cy,
+        cx: box.x + resolvedCx,
+        cy: box.y + resolvedCy,
         r: shape.radius,
       });
       return circle;
     }
 
     case "ellipse": {
+      const resolvedCx = shape.cxPct ? (shape.cx / 100) * box.width : shape.cx;
+      const resolvedCy = shape.cyPct ? (shape.cy / 100) * box.height : shape.cy;
       const ellipse = createSvgElement(ctx.svgDocument, "ellipse");
       setAttributes(ellipse, {
-        cx: box.x + shape.cx,
-        cy: box.y + shape.cy,
+        cx: box.x + resolvedCx,
+        cy: box.y + resolvedCy,
         rx: shape.rx,
         ry: shape.ry,
       });

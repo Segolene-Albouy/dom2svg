@@ -60,7 +60,7 @@ export async function renderHtmlElement(
     const shape = parseClipPath(clipPathValue);
     if (shape) {
       const clipId = createSvgClipPath(shape, box, ctx);
-      group.setAttribute("clip-path", `url(#${clipId})`);
+      if (clipId) group.setAttribute("clip-path", `url(#${clipId})`);
     }
   }
 
