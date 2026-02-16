@@ -156,8 +156,14 @@ export async function renderHtmlElement(
       renderListMarker(element, styles, box, ctx, group);
     }
 
-    // CSS mask-image (used by icon systems like Wikipedia's Codex icons)
-    const maskImage = styles.webkitMaskImage || (styles as any).maskImage;
+    // CSS mask-image (used by icon systems like Wikipedia's Codex icons).
+    // Check both longhand (mask-image / -webkit-mask-image) and shorthand
+    // (mask / -webkit-mask) since some browsers don't decompose the shorthand.
+    const maskImage =
+      styles.webkitMaskImage ||
+      (styles as any).maskImage ||
+      (styles as any).webkitMask ||
+      (styles as any).mask;
     if (maskImage && maskImage !== "none") {
       await applyMaskImage(maskImage, styles, box, ctx, group);
     }
