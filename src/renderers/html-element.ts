@@ -127,6 +127,17 @@ export async function renderHtmlElement(
       } else if (objectFit === "cover") {
         imgEl.setAttribute("preserveAspectRatio", "xMidYMid slice");
       }
+      // Clip image to border-radius when present
+      if (hasRadius(radii)) {
+        const clipId = ctx.idGenerator.next("clip");
+        const clipPath = createSvgElement(ctx.svgDocument, "clipPath");
+        clipPath.setAttribute("id", clipId);
+        const clipShape = createSvgElement(ctx.svgDocument, "path");
+        clipShape.setAttribute("d", buildRoundedRectPath(box.x, box.y, box.width, box.height, radii));
+        clipPath.appendChild(clipShape);
+        ctx.defs.appendChild(clipPath);
+        imgEl.setAttribute("clip-path", `url(#${clipId})`);
+      }
       group.appendChild(imgEl);
     }
 
@@ -799,8 +810,40 @@ async function renderPseudoElement(
   let text = content.replace(/^["']|["']$/g, "");
   if (!text) return;
 
-  const parentBox = getRelativeBox(element, rootElement);
+  const rootRect = rootElement.getBoundingClientRect();
   const fontSize = parseFloat(styles.fontSize) || 16;
+
+  // Measure the pseudo-element's actual position by inserting a temporary span
+  // that replaces the pseudo-element's role in the layout
+  const marker = document.createElement("span");
+  marker.style.cssText = `
+    font-family: ${styles.fontFamily};
+    font-size: ${styles.fontSize};
+    font-weight: ${styles.fontWeight};
+    font-style: ${styles.fontStyle};
+    letter-spacing: ${styles.letterSpacing};
+    visibility: hidden;
+    pointer-events: none;
+  `;
+  marker.textContent = text;
+
+  // Insert at the correct position (first child for ::before, last for ::after)
+  if (pseudo === "::before") {
+    element.insertBefore(marker, element.firstChild);
+  } else {
+    element.appendChild(marker);
+  }
+
+  const markerRect = marker.getBoundingClientRect();
+  const markerX = markerRect.left - rootRect.left;
+  const markerWidth = markerRect.width;
+  const markerHeight = markerRect.height;
+
+  // Compute baseline using same algorithm as text-node renderer
+  const topPadding = (markerHeight - fontSize) / 2;
+  const baselineY = markerRect.top - rootRect.top + topPadding + fontSize * 0.8;
+
+  element.removeChild(marker);
 
   // Create a text element for the pseudo content
   const textEl = createSvgElement(ctx.svgDocument, "text");
@@ -810,20 +853,12 @@ async function renderPseudoElement(
     "font-weight": styles.fontWeight,
     "font-style": styles.fontStyle,
     fill: styles.color,
+    x: markerX.toFixed(2),
+    y: baselineY.toFixed(2),
   });
 
-  // Position based on pseudo type
-  if (pseudo === "::before") {
-    setAttributes(textEl, {
-      x: parentBox.x,
-      y: parentBox.y + fontSize * 0.85,
-    });
-  } else {
-    setAttributes(textEl, {
-      x: parentBox.x + parentBox.width,
-      y: parentBox.y + fontSize * 0.85,
-      "text-anchor": "end",
-    });
+  if (styles.letterSpacing && styles.letterSpacing !== "normal") {
+    textEl.setAttribute("letter-spacing", styles.letterSpacing);
   }
 
   textEl.textContent = text;
@@ -831,27 +866,12 @@ async function renderPseudoElement(
   // Background for pseudo-element
   const bgColor = parseBackgroundColor(styles);
   if (bgColor) {
-    // Inject a temporary span to measure the pseudo-element
-    const span = document.createElement("span");
-    span.style.cssText = `
-      font-family: ${styles.fontFamily};
-      font-size: ${styles.fontSize};
-      font-weight: ${styles.fontWeight};
-      visibility: hidden;
-      position: absolute;
-    `;
-    span.textContent = text;
-    document.body.appendChild(span);
-    const width = span.offsetWidth;
-    const height = span.offsetHeight;
-    document.body.removeChild(span);
-
     const bgRect = createSvgElement(ctx.svgDocument, "rect");
     setAttributes(bgRect, {
-      x: pseudo === "::before" ? parentBox.x : parentBox.x + parentBox.width - width,
-      y: parentBox.y,
-      width,
-      height,
+      x: markerX,
+      y: markerRect.top - rootRect.top,
+      width: markerWidth,
+      height: markerHeight,
       fill: bgColor,
     });
     group.appendChild(bgRect);
