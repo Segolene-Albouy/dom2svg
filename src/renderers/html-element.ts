@@ -72,7 +72,7 @@ export async function renderHtmlElement(
 
   if (!hidden) {
     // CSS Filters (blur, brightness, contrast, drop-shadow, grayscale, etc.)
-    if (styles.filter && styles.filter !== "none") {
+    if (!ctx.compat.stripFilters && styles.filter && styles.filter !== "none") {
       const filterId = createSvgFilter(styles.filter, ctx);
       if (filterId) {
         group.setAttribute("filter", `url(#${filterId})`);
@@ -80,11 +80,13 @@ export async function renderHtmlElement(
     }
 
     // Box shadows (rendered behind content)
-    const boxShadowValue = styles.boxShadow;
-    if (boxShadowValue && boxShadowValue !== "none") {
-      const shadows = parseBoxShadows(boxShadowValue);
-      if (shadows.length > 0) {
-        renderBoxShadows(shadows, box, radii, ctx, group);
+    if (!ctx.compat.stripBoxShadows) {
+      const boxShadowValue = styles.boxShadow;
+      if (boxShadowValue && boxShadowValue !== "none") {
+        const shadows = parseBoxShadows(boxShadowValue);
+        if (shadows.length > 0) {
+          renderBoxShadows(shadows, box, radii, ctx, group);
+        }
       }
     }
 
@@ -172,27 +174,31 @@ export async function renderHtmlElement(
     // CSS mask-image (used by icon systems like Wikipedia's Codex icons).
     // Check both longhand (mask-image / -webkit-mask-image) and shorthand
     // (mask / -webkit-mask) since some browsers don't decompose the shorthand.
-    const maskImage =
-      styles.webkitMaskImage ||
-      (styles as any).maskImage ||
-      (styles as any).webkitMask ||
-      (styles as any).mask;
-    if (maskImage && maskImage !== "none") {
-      await applyMaskImage(maskImage, styles, box, ctx, group);
+    if (!ctx.compat.stripMaskImage) {
+      const maskImage =
+        styles.webkitMaskImage ||
+        (styles as any).maskImage ||
+        (styles as any).webkitMask ||
+        (styles as any).mask;
+      if (maskImage && maskImage !== "none") {
+        await applyMaskImage(maskImage, styles, box, ctx, group);
+      }
     }
 
     // Pseudo-elements (::before, ::after)
     await renderPseudoElement(element, "::before", rootElement, ctx, group);
   }
 
-  // Overflow clipping — wrap children in a mask group.
+  // Overflow clipping — wrap children in a mask or clipPath group.
   // Skip for the root element: its border-radius clipping is handled at
   // the SVG level in index.ts, and a mask here causes subpixel truncation.
   if (hasOverflowClip(styles) && element !== rootElement) {
-    const maskGroup = createOverflowMask(box, radii, ctx);
-    group.appendChild(maskGroup);
-    // The caller should append children to this maskGroup
-    (group as any).__childTarget = maskGroup;
+    const clipGroup = ctx.compat.useClipPathForOverflow
+      ? createOverflowClipPath(box, radii, ctx)
+      : createOverflowMask(box, radii, ctx);
+    group.appendChild(clipGroup);
+    // The caller should append children to this clipGroup
+    (group as any).__childTarget = clipGroup;
   }
 
   return group;
@@ -379,6 +385,26 @@ function createOverflowMask(
   return masked;
 }
 
+/** Create an overflow clip using <clipPath> for Inkscape/LaTeX compatibility */
+function createOverflowClipPath(
+  box: BoxGeometry,
+  radii: BorderRadii,
+  ctx: RenderContext,
+): SVGGElement {
+  const clipId = ctx.idGenerator.next("clip");
+  const clipPath = createSvgElement(ctx.svgDocument, "clipPath");
+  clipPath.setAttribute("id", clipId);
+
+  const clipShape = createBoxShape(box, radii, ctx);
+  clipPath.appendChild(clipShape);
+  ctx.defs.appendChild(clipPath);
+
+  const clipped = createSvgElement(ctx.svgDocument, "g") as SVGGElement;
+  clipped.setAttribute("clip-path", `url(#${clipId})`);
+
+  return clipped;
+}
+
 /** Apply a clip mask to a single element */
 function applyClipMask(
   target: SVGElement,
@@ -445,7 +471,9 @@ async function applyMaskImage(
   const maskId = ctx.idGenerator.next("mask");
   const mask = createSvgElement(ctx.svgDocument, "mask");
   mask.setAttribute("id", maskId);
-  mask.setAttribute("style", "mask-type: alpha");
+  if (!ctx.compat.avoidStyleAttributes) {
+    mask.setAttribute("style", "mask-type: alpha");
+  }
 
   const imgEl = createSvgElement(ctx.svgDocument, "image");
   setAttributes(imgEl, {

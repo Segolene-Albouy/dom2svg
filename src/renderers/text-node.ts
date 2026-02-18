@@ -91,7 +91,7 @@ export async function renderTextNode(
         x: line.x.toFixed(2),
         y: line.y.toFixed(2),
       });
-      applyTextStyles(textEl, styles);
+      applyTextStyles(textEl, styles, ctx);
       textEl.textContent = displayText;
       group.appendChild(textEl);
     }
@@ -100,12 +100,14 @@ export async function renderTextNode(
   if (group.childNodes.length === 0) return null;
 
   // Apply text-shadow filter if present
-  const textShadowValue = styles.textShadow;
-  if (textShadowValue && textShadowValue !== "none") {
-    const shadows = parseTextShadows(textShadowValue);
-    const filterId = createTextShadowFilter(shadows, ctx);
-    if (filterId) {
-      group.setAttribute("filter", `url(#${filterId})`);
+  if (!ctx.compat.stripTextShadows) {
+    const textShadowValue = styles.textShadow;
+    if (textShadowValue && textShadowValue !== "none") {
+      const shadows = parseTextShadows(textShadowValue);
+      const filterId = createTextShadowFilter(shadows, ctx);
+      if (filterId) {
+        group.setAttribute("filter", `url(#${filterId})`);
+      }
     }
   }
 
@@ -347,6 +349,7 @@ function applyTextTransform(text: string, transform: string): string {
 function applyTextStyles(
   textEl: SVGTextElement,
   styles: CSSStyleDeclaration,
+  ctx: RenderContext,
 ): void {
   setAttributes(textEl, {
     "font-family": styles.fontFamily,
@@ -358,7 +361,9 @@ function applyTextStyles(
 
   // Preserve whitespace so that leading/trailing spaces in normalized text
   // are rendered (matching CSS's inline whitespace between elements).
-  textEl.setAttribute("xml:space", "preserve");
+  if (!ctx.compat.stripXmlSpace) {
+    textEl.setAttribute("xml:space", "preserve");
+  }
 
   if (styles.letterSpacing && styles.letterSpacing !== "normal") {
     textEl.setAttribute("letter-spacing", styles.letterSpacing);

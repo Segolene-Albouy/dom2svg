@@ -8,6 +8,27 @@ export interface FontConfig {
 /** Font mapping: family name → URL string, single config, or array of configs for multiple weights/styles */
 export type FontMapping = Record<string, string | FontConfig | FontConfig[]>;
 
+/** SVG compatibility configuration flags */
+export interface SvgCompatConfig {
+  /** Use <clipPath> instead of <mask> for overflow clipping */
+  useClipPathForOverflow: boolean;
+  /** Skip CSS filter effects (blur, brightness, etc.) */
+  stripFilters: boolean;
+  /** Skip box-shadow rendering */
+  stripBoxShadows: boolean;
+  /** Skip CSS mask-image */
+  stripMaskImage: boolean;
+  /** Skip text-shadow filters */
+  stripTextShadows: boolean;
+  /** No style= attributes on SVG elements */
+  avoidStyleAttributes: boolean;
+  /** No xml:space="preserve" on <text> elements */
+  stripXmlSpace: boolean;
+}
+
+/** SVG compatibility preset: 'full' (default), 'inkscape' (LaTeX/Inkscape safe), or custom config */
+export type SvgCompat = 'full' | 'inkscape' | SvgCompatConfig;
+
 /** Options for domToSvg() */
 export interface DomToSvgOptions {
   /** Map of font-family → URL or FontConfig for text-to-path conversion */
@@ -28,6 +49,8 @@ export interface DomToSvgOptions {
    *  with nested CSS transforms (e.g. SvelteFlow, React Flow) where
    *  the default behaviour would double-apply transforms. */
   flattenTransforms?: boolean;
+  /** SVG compatibility preset or custom config (default: 'full') */
+  compat?: SvgCompat;
 }
 
 /** Internal render context passed through the tree */
@@ -40,6 +63,8 @@ export interface RenderContext {
   idGenerator: IdGenerator;
   /** Options from the caller */
   options: DomToSvgOptions;
+  /** Resolved SVG compatibility config */
+  compat: SvgCompatConfig;
   /** Font cache (available when textToPath is enabled) */
   fontCache?: FontCache;
   /** Current inherited opacity */
