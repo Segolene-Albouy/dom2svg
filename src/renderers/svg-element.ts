@@ -37,7 +37,12 @@ function cloneWithNamespace(
   ) as SVGElement;
 
   // Copy attributes
+  const stripStyle = ctx.compat.avoidStyleAttributes;
   for (const attr of Array.from(node.attributes)) {
+    // In compat mode, skip style (CSS variables, z-index) and class (no stylesheet in output)
+    if (stripStyle && (attr.localName === "style" || attr.localName === "class")) {
+      continue;
+    }
     if (attr.namespaceURI === XLINK_NS) {
       clone.setAttributeNS(XLINK_NS, attr.localName, attr.value);
     } else if (attr.namespaceURI) {
@@ -50,7 +55,7 @@ function cloneWithNamespace(
   // Inline CSS-applied fill/stroke that aren't present as attributes.
   // Many icon systems (e.g. GitHub Octicons) set fill via CSS rules like
   // `.octicon { fill: currentColor }` — these won't be in the attributes.
-  inlineSvgPresentationStyles(node, clone);
+  inlineSvgPresentationStyles(node, clone, ctx);
 
   // Recurse into children
   for (const child of Array.from(node.childNodes)) {
@@ -110,7 +115,7 @@ function resolveUseElement(
   }
 
   // Inline CSS-applied fill/stroke from the <use> element
-  inlineSvgPresentationStyles(useEl, group);
+  inlineSvgPresentationStyles(useEl, group, ctx);
 
   if (refEl.localName === "symbol") {
     // <symbol> has a viewBox — wrap content in an <svg> to apply it
@@ -139,7 +144,7 @@ function resolveUseElement(
 }
 
 /** Inline key SVG presentation properties that may come from CSS rather than attributes */
-function inlineSvgPresentationStyles(source: SVGElement, clone: SVGElement): void {
+function inlineSvgPresentationStyles(source: SVGElement, clone: SVGElement, ctx: RenderContext): void {
   const styles = window.getComputedStyle(source);
 
   // fill — default in SVG is "rgb(0, 0, 0)" (black)
@@ -158,8 +163,8 @@ function inlineSvgPresentationStyles(source: SVGElement, clone: SVGElement): voi
     }
   }
 
-  // opacity
-  if (!clone.hasAttribute("opacity")) {
+  // opacity — skip in compat mode to prevent Inkscape rasterization
+  if (!ctx.compat.stripGroupOpacity && !clone.hasAttribute("opacity")) {
     const opacity = styles.opacity;
     if (opacity && opacity !== "1") {
       clone.setAttribute("opacity", opacity);
