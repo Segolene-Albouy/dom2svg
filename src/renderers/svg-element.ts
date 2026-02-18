@@ -31,13 +31,32 @@ function cloneWithNamespace(
     // Fallback: clone as-is if resolution fails
   }
 
+  // In compat mode, flatten nested <svg> without viewBox into <g> + translate.
+  // Inkscape ignores overflow="visible" during PDF export, clipping edge paths
+  // that extend outside the nested SVG viewport.
+  const flattenSvg =
+    ctx.compat.flattenNestedSvg &&
+    node.localName === "svg" &&
+    node.ownerSVGElement !== null &&
+    !node.getAttribute("viewBox");
+
   const clone = ctx.svgDocument.createElementNS(
     node.namespaceURI || SVG_NS,
-    node.localName,
+    flattenSvg ? "g" : node.localName,
   ) as SVGElement;
 
   // Copy attributes
+  const stripStyle = ctx.compat.avoidStyleAttributes;
+  const svgGeomAttrs = new Set(["x", "y", "width", "height", "overflow", "viewBox"]);
   for (const attr of Array.from(node.attributes)) {
+    // In compat mode, skip style (CSS variables, z-index) and class (no stylesheet in output)
+    if (stripStyle && (attr.localName === "style" || attr.localName === "class")) {
+      continue;
+    }
+    // When flattening <svg> → <g>, skip viewport attributes (handled via translate)
+    if (flattenSvg && svgGeomAttrs.has(attr.localName)) {
+      continue;
+    }
     if (attr.namespaceURI === XLINK_NS) {
       clone.setAttributeNS(XLINK_NS, attr.localName, attr.value);
     } else if (attr.namespaceURI) {
@@ -47,10 +66,19 @@ function cloneWithNamespace(
     }
   }
 
+  // Apply x/y from the nested <svg> as a translate on the <g>
+  if (flattenSvg) {
+    const x = parseFloat(node.getAttribute("x") || "0") || 0;
+    const y = parseFloat(node.getAttribute("y") || "0") || 0;
+    if (x !== 0 || y !== 0) {
+      clone.setAttribute("transform", `translate(${x},${y})`);
+    }
+  }
+
   // Inline CSS-applied fill/stroke that aren't present as attributes.
   // Many icon systems (e.g. GitHub Octicons) set fill via CSS rules like
   // `.octicon { fill: currentColor }` — these won't be in the attributes.
-  inlineSvgPresentationStyles(node, clone);
+  inlineSvgPresentationStyles(node, clone, ctx);
 
   // Recurse into children
   for (const child of Array.from(node.childNodes)) {
@@ -110,7 +138,7 @@ function resolveUseElement(
   }
 
   // Inline CSS-applied fill/stroke from the <use> element
-  inlineSvgPresentationStyles(useEl, group);
+  inlineSvgPresentationStyles(useEl, group, ctx);
 
   if (refEl.localName === "symbol") {
     // <symbol> has a viewBox — wrap content in an <svg> to apply it
@@ -139,7 +167,7 @@ function resolveUseElement(
 }
 
 /** Inline key SVG presentation properties that may come from CSS rather than attributes */
-function inlineSvgPresentationStyles(source: SVGElement, clone: SVGElement): void {
+function inlineSvgPresentationStyles(source: SVGElement, clone: SVGElement, ctx: RenderContext): void {
   const styles = window.getComputedStyle(source);
 
   // fill — default in SVG is "rgb(0, 0, 0)" (black)
@@ -158,10 +186,12 @@ function inlineSvgPresentationStyles(source: SVGElement, clone: SVGElement): voi
     }
   }
 
-  // opacity
+  // opacity — in compat mode only preserve opacity=0 (hidden), skip intermediate values
   if (!clone.hasAttribute("opacity")) {
     const opacity = styles.opacity;
-    if (opacity && opacity !== "1") {
+    if (opacity === "0") {
+      clone.setAttribute("opacity", "0");
+    } else if (!ctx.compat.stripGroupOpacity && opacity && opacity !== "1") {
       clone.setAttribute("opacity", opacity);
     }
   }

@@ -39,7 +39,35 @@ export async function renderHtmlElement(
 ): Promise<SVGGElement> {
   const group = createSvgElement(ctx.svgDocument, "g") as SVGGElement;
   const styles = window.getComputedStyle(element);
-  const box = getRelativeBox(element, rootElement);
+  let box = getRelativeBox(element, rootElement);
+
+  // When flattenTransforms is enabled, getBoundingClientRect returns the
+  // axis-aligned bounding box which loses rotated shapes (e.g. a CSS
+  // `transform: rotate(45deg)` diamond appears as a rectangle).
+  // Detect rotation and recover the pre-rotation dimensions so that
+  // visual shapes (background, borders) render at the correct size,
+  // then wrap them in a rotated SVG group.
+  let visualTransform: string | null = null;
+  if (ctx.options.flattenTransforms && styles.transform && styles.transform !== "none") {
+    const angle = extractRotationDeg(styles.transform);
+    if (Math.abs(angle) > 0.5) {
+      const el = element as HTMLElement;
+      const preW = el.offsetWidth;
+      const preH = el.offsetHeight;
+      if (preW > 0 && preH > 0 && (Math.abs(preW - box.width) > 1 || Math.abs(preH - box.height) > 1)) {
+        const cx = box.x + box.width / 2;
+        const cy = box.y + box.height / 2;
+        box = {
+          x: cx - preW / 2,
+          y: cy - preH / 2,
+          width: preW,
+          height: preH,
+        };
+        visualTransform = `rotate(${angle.toFixed(2)}, ${cx.toFixed(2)}, ${cy.toFixed(2)})`;
+      }
+    }
+  }
+
   const radii = clampRadii(parseBorderRadii(styles), box.width, box.height);
 
   // CSS Transforms (applied even when visibility:hidden for layout)
@@ -72,7 +100,7 @@ export async function renderHtmlElement(
 
   if (!hidden) {
     // CSS Filters (blur, brightness, contrast, drop-shadow, grayscale, etc.)
-    if (styles.filter && styles.filter !== "none") {
+    if (!ctx.compat.stripFilters && styles.filter && styles.filter !== "none") {
       const filterId = createSvgFilter(styles.filter, ctx);
       if (filterId) {
         group.setAttribute("filter", `url(#${filterId})`);
@@ -80,11 +108,13 @@ export async function renderHtmlElement(
     }
 
     // Box shadows (rendered behind content)
-    const boxShadowValue = styles.boxShadow;
-    if (boxShadowValue && boxShadowValue !== "none") {
-      const shadows = parseBoxShadows(boxShadowValue);
-      if (shadows.length > 0) {
-        renderBoxShadows(shadows, box, radii, ctx, group);
+    if (!ctx.compat.stripBoxShadows) {
+      const boxShadowValue = styles.boxShadow;
+      if (boxShadowValue && boxShadowValue !== "none") {
+        const shadows = parseBoxShadows(boxShadowValue);
+        if (shadows.length > 0) {
+          renderBoxShadows(shadows, box, radii, ctx, group);
+        }
       }
     }
 
@@ -172,27 +202,43 @@ export async function renderHtmlElement(
     // CSS mask-image (used by icon systems like Wikipedia's Codex icons).
     // Check both longhand (mask-image / -webkit-mask-image) and shorthand
     // (mask / -webkit-mask) since some browsers don't decompose the shorthand.
-    const maskImage =
-      styles.webkitMaskImage ||
-      (styles as any).maskImage ||
-      (styles as any).webkitMask ||
-      (styles as any).mask;
-    if (maskImage && maskImage !== "none") {
-      await applyMaskImage(maskImage, styles, box, ctx, group);
+    if (!ctx.compat.stripMaskImage) {
+      const maskImage =
+        styles.webkitMaskImage ||
+        (styles as any).maskImage ||
+        (styles as any).webkitMask ||
+        (styles as any).mask;
+      if (maskImage && maskImage !== "none") {
+        await applyMaskImage(maskImage, styles, box, ctx, group);
+      }
     }
 
     // Pseudo-elements (::before, ::after)
     await renderPseudoElement(element, "::before", rootElement, ctx, group);
   }
 
-  // Overflow clipping — wrap children in a mask group.
+  // Wrap visual elements in a rotated subgroup for rotation recovery.
+  // Children (appended later via __childTarget) are unaffected since
+  // they use absolute coordinates from getBoundingClientRect.
+  if (visualTransform) {
+    const visualGroup = createSvgElement(ctx.svgDocument, "g") as SVGGElement;
+    visualGroup.setAttribute("transform", visualTransform);
+    while (group.firstChild) {
+      visualGroup.appendChild(group.firstChild);
+    }
+    group.appendChild(visualGroup);
+  }
+
+  // Overflow clipping — wrap children in a mask or clipPath group.
   // Skip for the root element: its border-radius clipping is handled at
   // the SVG level in index.ts, and a mask here causes subpixel truncation.
   if (hasOverflowClip(styles) && element !== rootElement) {
-    const maskGroup = createOverflowMask(box, radii, ctx);
-    group.appendChild(maskGroup);
-    // The caller should append children to this maskGroup
-    (group as any).__childTarget = maskGroup;
+    const clipGroup = ctx.compat.useClipPathForOverflow
+      ? createOverflowClipPath(box, radii, ctx)
+      : createOverflowMask(box, radii, ctx);
+    group.appendChild(clipGroup);
+    // The caller should append children to this clipGroup
+    (group as any).__childTarget = clipGroup;
   }
 
   return group;
@@ -379,6 +425,26 @@ function createOverflowMask(
   return masked;
 }
 
+/** Create an overflow clip using <clipPath> for Inkscape/LaTeX compatibility */
+function createOverflowClipPath(
+  box: BoxGeometry,
+  radii: BorderRadii,
+  ctx: RenderContext,
+): SVGGElement {
+  const clipId = ctx.idGenerator.next("clip");
+  const clipPath = createSvgElement(ctx.svgDocument, "clipPath");
+  clipPath.setAttribute("id", clipId);
+
+  const clipShape = createBoxShape(box, radii, ctx);
+  clipPath.appendChild(clipShape);
+  ctx.defs.appendChild(clipPath);
+
+  const clipped = createSvgElement(ctx.svgDocument, "g") as SVGGElement;
+  clipped.setAttribute("clip-path", `url(#${clipId})`);
+
+  return clipped;
+}
+
 /** Apply a clip mask to a single element */
 function applyClipMask(
   target: SVGElement,
@@ -445,7 +511,9 @@ async function applyMaskImage(
   const maskId = ctx.idGenerator.next("mask");
   const mask = createSvgElement(ctx.svgDocument, "mask");
   mask.setAttribute("id", maskId);
-  mask.setAttribute("style", "mask-type: alpha");
+  if (!ctx.compat.avoidStyleAttributes) {
+    mask.setAttribute("style", "mask-type: alpha");
+  }
 
   const imgEl = createSvgElement(ctx.svgDocument, "image");
   setAttributes(imgEl, {
@@ -1002,4 +1070,14 @@ async function renderPseudoElement(
 
   textEl.textContent = text;
   group.appendChild(textEl);
+}
+
+/** Extract rotation angle in degrees from a CSS computed transform matrix */
+function extractRotationDeg(transform: string): number {
+  const match = transform.match(/^matrix\(([^,]+),\s*([^,]+)/);
+  if (!match) return 0;
+  const a = parseFloat(match[1]!);
+  const b = parseFloat(match[2]!);
+  if (isNaN(a) || isNaN(b)) return 0;
+  return Math.atan2(b, a) * (180 / Math.PI);
 }

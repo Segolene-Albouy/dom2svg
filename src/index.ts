@@ -10,12 +10,15 @@ import { walkElement } from "./core/traversal.js";
 import { createFontCache } from "./assets/fonts.js";
 import { parseBorderRadii, clampRadii, hasRadius, isUniformRadius, hasOverflowClip } from "./core/styles.js";
 import { buildRoundedRectPath } from "./utils/geometry.js";
+import { resolveCompat } from "./compat.js";
 
 export type {
   DomToSvgOptions,
   DomToSvgResult,
   FontConfig,
   FontMapping,
+  SvgCompat,
+  SvgCompatConfig,
 } from "./types.js";
 
 /**
@@ -70,6 +73,7 @@ export async function domToSvg(
     defs,
     idGenerator: createIdGenerator(),
     options,
+    compat: resolveCompat(options.compat),
     opacity: 1,
   };
 

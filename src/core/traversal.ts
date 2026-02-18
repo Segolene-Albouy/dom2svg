@@ -76,10 +76,15 @@ export async function walkElement(
   const group = await renderHtmlElement(element, rootElement, ctx);
   const childTarget = getChildTarget(group);
 
-  // Apply opacity
-  const opacity = parseFloat(styles.opacity);
-  if (opacity < 1) {
-    group.setAttribute("opacity", String(opacity));
+  // Apply opacity — in compat mode only preserve opacity=0 (hidden elements),
+  // skip intermediate values that cause Inkscape to rasterize subtrees
+  {
+    const opacity = parseFloat(styles.opacity);
+    if (opacity === 0) {
+      group.setAttribute("opacity", "0");
+    } else if (!ctx.compat.stripGroupOpacity && opacity < 1) {
+      group.setAttribute("opacity", String(opacity));
+    }
   }
 
   // Walk children in CSS paint order (z-index / stacking context aware)
