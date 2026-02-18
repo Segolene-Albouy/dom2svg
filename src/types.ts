@@ -24,6 +24,10 @@ export interface SvgCompatConfig {
   avoidStyleAttributes: boolean;
   /** No xml:space="preserve" on <text> elements */
   stripXmlSpace: boolean;
+  /** Skip group-level opacity (prevents Inkscape from rasterizing subtrees) */
+  stripGroupOpacity: boolean;
+  /** Avoid transform attributes inside <clipPath> (Inkscape ignores them) */
+  inlineClipPathTransforms: boolean;
 }
 
 /** SVG compatibility preset: 'full' (default), 'inkscape' (LaTeX/Inkscape safe), or custom config */

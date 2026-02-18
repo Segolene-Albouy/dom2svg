@@ -9,6 +9,8 @@ export const FULL_PRESET: SvgCompatConfig = {
   stripTextShadows: false,
   avoidStyleAttributes: false,
   stripXmlSpace: false,
+  stripGroupOpacity: false,
+  inlineClipPathTransforms: false,
 };
 
 /** Inkscape / LaTeX safe — strips unsupported SVG features */
@@ -20,6 +22,8 @@ export const INKSCAPE_PRESET: SvgCompatConfig = {
   stripTextShadows: true,
   avoidStyleAttributes: true,
   stripXmlSpace: true,
+  stripGroupOpacity: true,
+  inlineClipPathTransforms: true,
 };
 
 /** Resolve a compat option to a full config object */

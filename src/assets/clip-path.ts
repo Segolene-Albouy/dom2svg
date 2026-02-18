@@ -154,7 +154,7 @@ export function createSvgClipPath(
   const clipPath = createSvgElement(ctx.svgDocument, "clipPath");
   clipPath.setAttribute("id", clipId);
 
-  const svgShape = shapeToSvg(shape, box, ctx);
+  const svgShape = shapeToSvg(shape, box, ctx, ctx.compat.inlineClipPathTransforms);
   if (!svgShape) return null;
 
   clipPath.appendChild(svgShape);
@@ -163,10 +163,65 @@ export function createSvgClipPath(
   return clipId;
 }
 
+/**
+ * Translate all absolute coordinates in SVG path data by (dx, dy).
+ * Handles M, L, C, S, Q, T, A commands and their lowercase (relative) forms.
+ * Relative commands (lowercase) are left unchanged since they're already relative.
+ */
+function translatePathData(d: string, dx: number, dy: number): string {
+  // Tokenize: split on command letters, keeping them
+  return d.replace(/([MLHVCSQTAZmlhvcsqtaz])([^MLHVCSQTAZmlhvcsqtaz]*)/g, (_, cmd: string, args: string) => {
+    const nums = args.match(/-?\d*\.?\d+(?:e[+-]?\d+)?/gi)?.map(Number) ?? [];
+    if (nums.length === 0) return cmd + args;
+
+    switch (cmd) {
+      case "M": case "L": case "T":
+        // Pairs of (x, y)
+        for (let i = 0; i < nums.length - 1; i += 2) {
+          nums[i] += dx;
+          nums[i + 1] += dy;
+        }
+        break;
+      case "H":
+        for (let i = 0; i < nums.length; i++) nums[i] += dx;
+        break;
+      case "V":
+        for (let i = 0; i < nums.length; i++) nums[i] += dy;
+        break;
+      case "C":
+        // 6 values: (x1,y1, x2,y2, x,y)
+        for (let i = 0; i < nums.length - 1; i += 2) {
+          nums[i] += dx;
+          nums[i + 1] += dy;
+        }
+        break;
+      case "S": case "Q":
+        // 4 values: (x1,y1, x,y) or (x2,y2, x,y)
+        for (let i = 0; i < nums.length - 1; i += 2) {
+          nums[i] += dx;
+          nums[i + 1] += dy;
+        }
+        break;
+      case "A":
+        // 7 values: (rx, ry, angle, largeArc, sweep, x, y) — only translate x,y
+        for (let i = 0; i < nums.length; i += 7) {
+          if (i + 5 < nums.length) nums[i + 5] += dx;
+          if (i + 6 < nums.length) nums[i + 6] += dy;
+        }
+        break;
+      // Relative commands (lowercase) — leave unchanged
+      default:
+        return cmd + args;
+    }
+    return cmd + nums.join(" ");
+  });
+}
+
 function shapeToSvg(
   shape: ClipPathShape,
   box: BoxGeometry,
   ctx: RenderContext,
+  inlineTransforms: boolean = false,
 ): SVGElement | null {
   switch (shape.type) {
     case "inset": {
@@ -236,9 +291,14 @@ function shapeToSvg(
 
     case "path": {
       const path = createSvgElement(ctx.svgDocument, "path");
-      path.setAttribute("d", shape.d);
-      // Translate path to box position
-      path.setAttribute("transform", `translate(${box.x}, ${box.y})`);
+      if (inlineTransforms && (box.x !== 0 || box.y !== 0)) {
+        // Pre-translate path data to avoid transform attribute inside <clipPath>
+        // (Inkscape ignores transforms on elements inside <clipPath>)
+        path.setAttribute("d", translatePathData(shape.d, box.x, box.y));
+      } else {
+        path.setAttribute("d", shape.d);
+        path.setAttribute("transform", `translate(${box.x}, ${box.y})`);
+      }
       return path;
     }
 
