@@ -11,6 +11,7 @@ export const FULL_PRESET: SvgCompatConfig = {
   stripXmlSpace: false,
   stripGroupOpacity: false,
   inlineClipPathTransforms: false,
+  flattenNestedSvg: false,
 };
 
 /** Inkscape / LaTeX safe — strips unsupported SVG features */
@@ -24,6 +25,7 @@ export const INKSCAPE_PRESET: SvgCompatConfig = {
   stripXmlSpace: true,
   stripGroupOpacity: true,
   inlineClipPathTransforms: true,
+  flattenNestedSvg: true,
 };
 
 /** Resolve a compat option to a full config object */

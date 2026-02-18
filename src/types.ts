@@ -28,6 +28,8 @@ export interface SvgCompatConfig {
   stripGroupOpacity: boolean;
   /** Avoid transform attributes inside <clipPath> (Inkscape ignores them) */
   inlineClipPathTransforms: boolean;
+  /** Convert nested <svg> to <g> with translate (Inkscape clips overflow:visible) */
+  flattenNestedSvg: boolean;
 }
 
 /** SVG compatibility preset: 'full' (default), 'inkscape' (LaTeX/Inkscape safe), or custom config */

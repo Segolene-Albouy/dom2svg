@@ -31,16 +31,30 @@ function cloneWithNamespace(
     // Fallback: clone as-is if resolution fails
   }
 
+  // In compat mode, flatten nested <svg> without viewBox into <g> + translate.
+  // Inkscape ignores overflow="visible" during PDF export, clipping edge paths
+  // that extend outside the nested SVG viewport.
+  const flattenSvg =
+    ctx.compat.flattenNestedSvg &&
+    node.localName === "svg" &&
+    node.ownerSVGElement !== null &&
+    !node.getAttribute("viewBox");
+
   const clone = ctx.svgDocument.createElementNS(
     node.namespaceURI || SVG_NS,
-    node.localName,
+    flattenSvg ? "g" : node.localName,
   ) as SVGElement;
 
   // Copy attributes
   const stripStyle = ctx.compat.avoidStyleAttributes;
+  const svgGeomAttrs = new Set(["x", "y", "width", "height", "overflow", "viewBox"]);
   for (const attr of Array.from(node.attributes)) {
     // In compat mode, skip style (CSS variables, z-index) and class (no stylesheet in output)
     if (stripStyle && (attr.localName === "style" || attr.localName === "class")) {
+      continue;
+    }
+    // When flattening <svg> → <g>, skip viewport attributes (handled via translate)
+    if (flattenSvg && svgGeomAttrs.has(attr.localName)) {
       continue;
     }
     if (attr.namespaceURI === XLINK_NS) {
@@ -49,6 +63,15 @@ function cloneWithNamespace(
       clone.setAttributeNS(attr.namespaceURI, attr.localName, attr.value);
     } else {
       clone.setAttribute(attr.localName, attr.value);
+    }
+  }
+
+  // Apply x/y from the nested <svg> as a translate on the <g>
+  if (flattenSvg) {
+    const x = parseFloat(node.getAttribute("x") || "0") || 0;
+    const y = parseFloat(node.getAttribute("y") || "0") || 0;
+    if (x !== 0 || y !== 0) {
+      clone.setAttribute("transform", `translate(${x},${y})`);
     }
   }
 
