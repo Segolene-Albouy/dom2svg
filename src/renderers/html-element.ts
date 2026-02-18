@@ -39,7 +39,35 @@ export async function renderHtmlElement(
 ): Promise<SVGGElement> {
   const group = createSvgElement(ctx.svgDocument, "g") as SVGGElement;
   const styles = window.getComputedStyle(element);
-  const box = getRelativeBox(element, rootElement);
+  let box = getRelativeBox(element, rootElement);
+
+  // When flattenTransforms is enabled, getBoundingClientRect returns the
+  // axis-aligned bounding box which loses rotated shapes (e.g. a CSS
+  // `transform: rotate(45deg)` diamond appears as a rectangle).
+  // Detect rotation and recover the pre-rotation dimensions so that
+  // visual shapes (background, borders) render at the correct size,
+  // then wrap them in a rotated SVG group.
+  let visualTransform: string | null = null;
+  if (ctx.options.flattenTransforms && styles.transform && styles.transform !== "none") {
+    const angle = extractRotationDeg(styles.transform);
+    if (Math.abs(angle) > 0.5) {
+      const el = element as HTMLElement;
+      const preW = el.offsetWidth;
+      const preH = el.offsetHeight;
+      if (preW > 0 && preH > 0 && (Math.abs(preW - box.width) > 1 || Math.abs(preH - box.height) > 1)) {
+        const cx = box.x + box.width / 2;
+        const cy = box.y + box.height / 2;
+        box = {
+          x: cx - preW / 2,
+          y: cy - preH / 2,
+          width: preW,
+          height: preH,
+        };
+        visualTransform = `rotate(${angle.toFixed(2)}, ${cx.toFixed(2)}, ${cy.toFixed(2)})`;
+      }
+    }
+  }
+
   const radii = clampRadii(parseBorderRadii(styles), box.width, box.height);
 
   // CSS Transforms (applied even when visibility:hidden for layout)
@@ -187,6 +215,18 @@ export async function renderHtmlElement(
 
     // Pseudo-elements (::before, ::after)
     await renderPseudoElement(element, "::before", rootElement, ctx, group);
+  }
+
+  // Wrap visual elements in a rotated subgroup for rotation recovery.
+  // Children (appended later via __childTarget) are unaffected since
+  // they use absolute coordinates from getBoundingClientRect.
+  if (visualTransform) {
+    const visualGroup = createSvgElement(ctx.svgDocument, "g") as SVGGElement;
+    visualGroup.setAttribute("transform", visualTransform);
+    while (group.firstChild) {
+      visualGroup.appendChild(group.firstChild);
+    }
+    group.appendChild(visualGroup);
   }
 
   // Overflow clipping — wrap children in a mask or clipPath group.
@@ -1030,4 +1070,14 @@ async function renderPseudoElement(
 
   textEl.textContent = text;
   group.appendChild(textEl);
+}
+
+/** Extract rotation angle in degrees from a CSS computed transform matrix */
+function extractRotationDeg(transform: string): number {
+  const match = transform.match(/^matrix\(([^,]+),\s*([^,]+)/);
+  if (!match) return 0;
+  const a = parseFloat(match[1]!);
+  const b = parseFloat(match[2]!);
+  if (isNaN(a) || isNaN(b)) return 0;
+  return Math.atan2(b, a) * (180 / Math.PI);
 }
