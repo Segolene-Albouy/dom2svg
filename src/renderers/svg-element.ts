@@ -186,10 +186,12 @@ function inlineSvgPresentationStyles(source: SVGElement, clone: SVGElement, ctx:
     }
   }
 
-  // opacity — skip in compat mode to prevent Inkscape rasterization
-  if (!ctx.compat.stripGroupOpacity && !clone.hasAttribute("opacity")) {
+  // opacity — in compat mode only preserve opacity=0 (hidden), skip intermediate values
+  if (!clone.hasAttribute("opacity")) {
     const opacity = styles.opacity;
-    if (opacity && opacity !== "1") {
+    if (opacity === "0") {
+      clone.setAttribute("opacity", "0");
+    } else if (!ctx.compat.stripGroupOpacity && opacity && opacity !== "1") {
       clone.setAttribute("opacity", opacity);
     }
   }
