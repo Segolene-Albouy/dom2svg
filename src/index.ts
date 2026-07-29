@@ -11,6 +11,7 @@ import { createFontCache } from "./assets/fonts.js";
 import { parseBorderRadii, clampRadii, hasRadius, isUniformRadius, hasOverflowClip } from "./core/styles.js";
 import { buildRoundedRectPath } from "./utils/geometry.js";
 import { resolveCompat } from "./compat.js";
+import { flattenNestedSvgs } from "./utils/flatten.js";
 
 export type {
   DomToSvgOptions,
@@ -99,7 +100,10 @@ export async function domToSvg(
       defs.appendChild(clipPath);
       rootGroup.setAttribute("clip-path", `url(#${clipId})`);
     }
-    svg.appendChild(rootGroup);
+
+  // Nested <svg> viewports clip
+  if (ctx.compat.flattenNestedSvg) {
+    flattenNestedSvgs(svg);
   }
 
   // Remove defs if empty

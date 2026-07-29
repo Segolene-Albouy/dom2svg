@@ -69,3 +69,25 @@ export function getPseudoStyles(
 ): CSSStyleDeclaration {
   return window.getComputedStyle(element, pseudo);
 }
+
+const RGBA = /^rgba\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)[\s,/]+([\d.]+)\s*\)$/;
+
+const ALPHA_ATTR: Record<string, string> = {
+  fill: "fill-opacity",
+  stroke: "stroke-opacity",
+  "stop-color": "stop-opacity",
+  "flood-color": "flood-opacity",
+};
+
+/** Split rgba() paints into rgb() + a separate *-opacity attribute (SVG 1.1 compatible) */
+export function splitAlpha(el: Element): void {
+  for (const [paint, alpha] of Object.entries(ALPHA_ATTR)) {
+    const match = RGBA.exec(el.getAttribute(paint) || "");
+    if (!match) {
+      continue;
+    }
+    el.setAttribute(paint, `rgb(${match[1]}, ${match[2]}, ${match[3]})`);
+    const prev = parseFloat(el.getAttribute(alpha) || "1");
+    el.setAttribute(alpha, (+match[4] * (Number.isNaN(prev) ? 1 : prev)).toFixed(3));
+  }
+}

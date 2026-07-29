@@ -1,28 +1,37 @@
 import type { RenderContext } from "../types.js";
-import { SVG_NS, XLINK_NS } from "../utils/dom.js";
+import { SVG_NS, XLINK_NS, splitAlpha } from "../utils/dom.js";
+
+/** Attribute values needing computed-style resolution */
+const DYNAMIC = /var\(|currentColor/;
+
+/** Presentation properties inlined when they come from CSS rather than attributes */
+const INLINED = [
+  "fill", "stroke", "stroke-width", "stroke-dasharray", "stroke-linecap", "text-anchor",
+];
 
 /**
  * Clone an inline SVG element into the output document,
  * rewriting IDs to avoid conflicts between multiple cloned SVGs
- * and resolving `currentColor` to the actual computed color.
+ * and resolving `currentColor` and `var()` to computed values.
  */
 export function renderSvgElement(
-  element: SVGElement,
-  ctx: RenderContext,
+    element: SVGElement,
+    ctx: RenderContext,
 ): SVGElement {
-  // Resolve currentColor from the SVG element's inherited CSS color
-  const computedColor = window.getComputedStyle(element).color || "rgb(0, 0, 0)";
-  const clone = cloneWithNamespace(element, ctx);
-  resolveCurrentColor(clone, computedColor);
+  const parentStyles = element.parentElement
+      ? window.getComputedStyle(element.parentElement)
+      : null;
+  const clone = cloneWithNamespace(element, ctx, 0, parentStyles);
   rewriteIds(clone, ctx);
   return clone;
 }
 
 /** Deep clone an SVG element into the target document, preserving namespaces */
 function cloneWithNamespace(
-  node: SVGElement,
-  ctx: RenderContext,
-  resolveDepth: number = 0,
+    node: SVGElement,
+    ctx: RenderContext,
+    resolveDepth: number = 0,
+    parentStyles: CSSStyleDeclaration | null = null,
 ): SVGElement {
   // Resolve <use> elements by inlining the referenced content
   if (node.localName === "use" && resolveDepth < 5) {
@@ -31,59 +40,41 @@ function cloneWithNamespace(
     // Fallback: clone as-is if resolution fails
   }
 
-  // In compat mode, flatten nested <svg> without viewBox into <g> + translate.
-  // Inkscape ignores overflow="visible" during PDF export, clipping edge paths
-  // that extend outside the nested SVG viewport.
-  const flattenSvg =
-    ctx.compat.flattenNestedSvg &&
-    node.localName === "svg" &&
-    node.ownerSVGElement !== null &&
-    !node.getAttribute("viewBox");
-
+  const styles = window.getComputedStyle(node);
   const clone = ctx.svgDocument.createElementNS(
-    node.namespaceURI || SVG_NS,
-    flattenSvg ? "g" : node.localName,
+      node.namespaceURI || SVG_NS,
+      node.localName,
   ) as SVGElement;
 
-  // Copy attributes
+  // Copy attributes, resolving currentColor and var() against the source node
   const stripStyle = ctx.compat.avoidStyleAttributes;
-  const svgGeomAttrs = new Set(["x", "y", "width", "height", "overflow", "viewBox"]);
   for (const attr of Array.from(node.attributes)) {
     // In compat mode, skip style (CSS variables, z-index) and class (no stylesheet in output)
     if (stripStyle && (attr.localName === "style" || attr.localName === "class")) {
       continue;
     }
-    // When flattening <svg> → <g>, skip viewport attributes (handled via translate)
-    if (flattenSvg && svgGeomAttrs.has(attr.localName)) {
-      continue;
-    }
+    const value = DYNAMIC.test(attr.value)
+        ? styles.getPropertyValue(attr.localName) || attr.value
+        : attr.value;
     if (attr.namespaceURI === XLINK_NS) {
-      clone.setAttributeNS(XLINK_NS, attr.localName, attr.value);
+      clone.setAttributeNS(XLINK_NS, attr.localName, value);
     } else if (attr.namespaceURI) {
-      clone.setAttributeNS(attr.namespaceURI, attr.localName, attr.value);
+      clone.setAttributeNS(attr.namespaceURI, attr.localName, value);
     } else {
-      clone.setAttribute(attr.localName, attr.value);
-    }
-  }
-
-  // Apply x/y from the nested <svg> as a translate on the <g>
-  if (flattenSvg) {
-    const x = parseFloat(node.getAttribute("x") || "0") || 0;
-    const y = parseFloat(node.getAttribute("y") || "0") || 0;
-    if (x !== 0 || y !== 0) {
-      clone.setAttribute("transform", `translate(${x},${y})`);
+      clone.setAttribute(attr.localName, value);
     }
   }
 
   // Inline CSS-applied fill/stroke that aren't present as attributes.
   // Many icon systems (e.g. GitHub Octicons) set fill via CSS rules like
   // `.octicon { fill: currentColor }` — these won't be in the attributes.
-  inlineSvgPresentationStyles(node, clone, ctx);
+  inlineSvgPresentationStyles(styles, parentStyles, clone, ctx);
+  splitAlpha(clone);
 
   // Recurse into children
   for (const child of Array.from(node.childNodes)) {
     if (child.nodeType === Node.ELEMENT_NODE) {
-      clone.appendChild(cloneWithNamespace(child as SVGElement, ctx, resolveDepth));
+      clone.appendChild(cloneWithNamespace(child as SVGElement, ctx, resolveDepth, styles));
     } else if (child.nodeType === Node.TEXT_NODE) {
       clone.appendChild(ctx.svgDocument.createTextNode(child.textContent || ""));
     }
@@ -101,18 +92,19 @@ function cloneWithNamespace(
  * symbols won't exist in our output SVG, we inline the content directly.
  */
 function resolveUseElement(
-  useEl: SVGElement,
-  ctx: RenderContext,
-  resolveDepth: number,
+    useEl: SVGElement,
+    ctx: RenderContext,
+    resolveDepth: number,
 ): SVGElement | null {
   const href =
-    useEl.getAttribute("href") ||
-    useEl.getAttributeNS(XLINK_NS, "href");
+      useEl.getAttribute("href") ||
+      useEl.getAttributeNS(XLINK_NS, "href");
 
   if (!href || !href.startsWith("#")) return null;
 
   const refId = href.slice(1);
-  const refEl = document.getElementById(refId);
+  const scope = useEl.getRootNode() as Document | ShadowRoot;
+  const refEl = scope.getElementById?.(refId) ?? document.getElementById(refId);
   if (!refEl) return null;
 
   const group = ctx.svgDocument.createElementNS(SVG_NS, "g") as SVGElement;
@@ -138,7 +130,12 @@ function resolveUseElement(
   }
 
   // Inline CSS-applied fill/stroke from the <use> element
-  inlineSvgPresentationStyles(useEl, group, ctx);
+  const useStyles = window.getComputedStyle(useEl);
+  const useParentStyles = useEl.parentElement
+      ? window.getComputedStyle(useEl.parentElement)
+      : null;
+  inlineSvgPresentationStyles(useStyles, useParentStyles, group, ctx);
+  splitAlpha(group);
 
   if (refEl.localName === "symbol") {
     // <symbol> has a viewBox — wrap content in an <svg> to apply it
@@ -152,38 +149,42 @@ function resolveUseElement(
     if (height) wrapper.setAttribute("height", height);
     wrapper.setAttribute("overflow", "hidden");
 
+    const refStyles = window.getComputedStyle(refEl);
     for (const child of Array.from(refEl.childNodes)) {
       if (child.nodeType === Node.ELEMENT_NODE) {
-        wrapper.appendChild(cloneWithNamespace(child as SVGElement, ctx, resolveDepth + 1));
+        wrapper.appendChild(
+            cloneWithNamespace(child as SVGElement, ctx, resolveDepth + 1, refStyles),
+        );
       }
     }
     group.appendChild(wrapper);
   } else {
     // For other elements (<g>, <path>, etc.), clone the element itself
-    group.appendChild(cloneWithNamespace(refEl as SVGElement, ctx, resolveDepth + 1));
+    const refParentStyles = refEl.parentElement
+        ? window.getComputedStyle(refEl.parentElement)
+        : null;
+    group.appendChild(
+        cloneWithNamespace(refEl as SVGElement, ctx, resolveDepth + 1, refParentStyles),
+    );
   }
 
   return group;
 }
 
 /** Inline key SVG presentation properties that may come from CSS rather than attributes */
-function inlineSvgPresentationStyles(source: SVGElement, clone: SVGElement, ctx: RenderContext): void {
-  const styles = window.getComputedStyle(source);
-
-  // fill — default in SVG is "rgb(0, 0, 0)" (black)
-  if (!clone.hasAttribute("fill")) {
-    const fill = styles.fill;
-    if (fill && fill !== "rgb(0, 0, 0)") {
-      clone.setAttribute("fill", fill);
-    }
-  }
-
-  // stroke — default is "none"
-  if (!clone.hasAttribute("stroke")) {
-    const stroke = styles.stroke;
-    if (stroke && stroke !== "none") {
-      clone.setAttribute("stroke", stroke);
-    }
+function inlineSvgPresentationStyles(
+    styles: CSSStyleDeclaration,
+    parentStyles: CSSStyleDeclaration | null,
+    clone: SVGElement,
+    ctx: RenderContext,
+): void {
+  // Only write a property when it differs from the inherited value, so an
+  // explicitly-black fill inside a white group survives while defaults don't bloat the output
+  for (const prop of INLINED) {
+    if (clone.hasAttribute(prop)) continue;
+    const value = styles.getPropertyValue(prop);
+    if (!value || value === parentStyles?.getPropertyValue(prop)) continue;
+    clone.setAttribute(prop, value);
   }
 
   // opacity — in compat mode only preserve opacity=0 (hidden), skip intermediate values
@@ -227,26 +228,23 @@ function rewriteIds(root: SVGElement, ctx: RenderContext): void {
 }
 
 function rewriteUrlReferences(
-  element: SVGElement,
-  idMap: Map<string, string>,
+    element: SVGElement,
+    idMap: Map<string, string>,
 ): void {
   for (const attr of Array.from(element.attributes)) {
     if (attr.value.includes("url(#")) {
-      let newValue = attr.value;
-      for (const [oldId, newId] of idMap) {
-        newValue = newValue.replace(
-          new RegExp(`url\\(#${escapeRegex(oldId)}\\)`, "g"),
-          `url(#${newId})`,
-        );
-      }
+      const newValue = attr.value.replace(
+          /url\(#([^)]+)\)/g,
+          (match, id: string) => (idMap.has(id) ? `url(#${idMap.get(id)})` : match),
+      );
       if (newValue !== attr.value) {
         element.setAttribute(attr.localName, newValue);
       }
     }
     // Also handle href="#id" (for <use> elements etc.)
     if (
-      (attr.localName === "href" || attr.localName === "xlink:href") &&
-      attr.value.startsWith("#")
+        (attr.localName === "href" || attr.localName === "xlink:href") &&
+        attr.value.startsWith("#")
     ) {
       const refId = attr.value.slice(1);
       if (idMap.has(refId)) {
@@ -265,22 +263,4 @@ function rewriteUrlReferences(
       rewriteUrlReferences(child, idMap);
     }
   }
-}
-
-/** Replace `currentColor` in fill/stroke/color attributes with the resolved color */
-function resolveCurrentColor(element: SVGElement, color: string): void {
-  for (const attr of Array.from(element.attributes)) {
-    if (attr.value === "currentColor") {
-      element.setAttribute(attr.localName, color);
-    }
-  }
-  for (const child of Array.from(element.children)) {
-    if (child instanceof SVGElement) {
-      resolveCurrentColor(child, color);
-    }
-  }
-}
-
-function escapeRegex(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
