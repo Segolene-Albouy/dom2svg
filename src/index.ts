@@ -30,8 +30,8 @@ export type {
  * @returns A result object with the SVG and serialization helpers
  */
 export async function domToSvg(
-  element: Element,
-  options: DomToSvgOptions = {},
+    element: Element,
+    options: DomToSvgOptions = {},
 ): Promise<DomToSvgResult> {
   const padding = options.padding ?? 0;
   const rect = element.getBoundingClientRect();
@@ -100,58 +100,59 @@ export async function domToSvg(
       defs.appendChild(clipPath);
       rootGroup.setAttribute("clip-path", `url(#${clipId})`);
     }
-
-    // Nested <svg> viewports clip
-    if (ctx.compat.flattenNestedSvg) {
-      flattenNestedSvgs(svg);
-    }
-
-    // Remove defs if empty
-    if (defs.childNodes.length === 0) {
-      svg.removeChild(defs);
-    }
-
-    return createResult(svg);
+    svg.appendChild(rootGroup);
   }
 
-  /** Create a rounded-rect shape for the root element's clipPath */
-  function createRootClipShape(
-      doc: Document,
-      width: number,
-      height: number,
-      radii: BorderRadii,
-  ): SVGElement {
-    if (isUniformRadius(radii)) {
-      const rect = createSvgElement(doc, "rect");
-      setAttributes(rect, {x: 0, y: 0, width, height, rx: radii.topLeft[0], ry: radii.topLeft[1]});
-      return rect;
-    }
-    const path = createSvgElement(doc, "path");
-    path.setAttribute("d", buildRoundedRectPath(0, 0, width, height, radii));
-    return path;
+  // Nested <svg> viewports clip in Inkscape/Figma regardless of overflow="visible"
+  if (ctx.compat.flattenNestedSvg) {
+    flattenNestedSvgs(svg);
   }
 
-  function createResult(svg: SVGSVGElement): DomToSvgResult {
-    return {
-      svg,
-      toString() {
-        const serializer = new XMLSerializer();
-        const xmlStr = serializer.serializeToString(svg);
-        return `<?xml version="1.0" encoding="UTF-8"?>\n${xmlStr}`;
-      },
-      toBlob() {
-        const str = this.toString();
-        return new Blob([str], {type: "image/svg+xml;charset=utf-8"});
-      },
-      download(filename = "export.svg") {
-        const blob = this.toBlob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = filename;
-        a.click();
-        setTimeout(() => URL.revokeObjectURL(url), 60_000);
-      },
-    };
+  // Remove defs if empty
+  if (defs.childNodes.length === 0) {
+    svg.removeChild(defs);
   }
+
+  return createResult(svg);
+}
+
+/** Create a rounded-rect shape for the root element's clipPath */
+function createRootClipShape(
+    doc: Document,
+    width: number,
+    height: number,
+    radii: BorderRadii,
+): SVGElement {
+  if (isUniformRadius(radii)) {
+    const rect = createSvgElement(doc, "rect");
+    setAttributes(rect, {x: 0, y: 0, width, height, rx: radii.topLeft[0], ry: radii.topLeft[1]});
+    return rect;
+  }
+  const path = createSvgElement(doc, "path");
+  path.setAttribute("d", buildRoundedRectPath(0, 0, width, height, radii));
+  return path;
+}
+
+function createResult(svg: SVGSVGElement): DomToSvgResult {
+  return {
+    svg,
+    toString() {
+      const serializer = new XMLSerializer();
+      const xmlStr = serializer.serializeToString(svg);
+      return `<?xml version="1.0" encoding="UTF-8"?>\n${xmlStr}`;
+    },
+    toBlob() {
+      const str = this.toString();
+      return new Blob([str], {type: "image/svg+xml;charset=utf-8"});
+    },
+    download(filename = "export.svg") {
+      const blob = this.toBlob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    },
+  };
 }

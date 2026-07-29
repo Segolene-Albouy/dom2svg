@@ -104,7 +104,8 @@ function resolveUseElement(
 
   const refId = href.slice(1);
   const scope = useEl.getRootNode() as Document | ShadowRoot;
-  const refEl = scope.getElementById?.(refId) ?? document.getElementById(refId);
+  const selector = `#${CSS.escape(refId)}`;
+  const refEl = scope.querySelector(selector) ?? document.querySelector(selector);
   if (!refEl) return null;
 
   const group = ctx.svgDocument.createElementNS(SVG_NS, "g") as SVGElement;
@@ -179,7 +180,7 @@ function inlineSvgPresentationStyles(
     ctx: RenderContext,
 ): void {
   // Only write a property when it differs from the inherited value, so an
-  // explicitly-black fill inside a white group survives while defaults don't bloat the output
+  // explicitly black fill inside a white group survives while defaults don't bloat the output
   for (const prop of INLINED) {
     if (clone.hasAttribute(prop)) continue;
     const value = styles.getPropertyValue(prop);
