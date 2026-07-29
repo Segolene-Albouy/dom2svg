@@ -69,3 +69,20 @@ export function canvasToDataUrl(canvas: HTMLCanvasElement): string {
     return "";
   }
 }
+
+/** Fetch an image and return it as a data URL, preserving the original encoding */
+export async function fetchAsDataUrl(url: string): Promise<string> {
+  try {
+    if (url.startsWith("data:")) return url;
+    const blob = await fetch(url, { mode: "cors", credentials: "omit" }).then(r => r.blob());
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(blob);
+    });
+  } catch (e) {
+    return imageToDataUrl(url);
+  }
+
+}

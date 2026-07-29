@@ -12,6 +12,7 @@ import { parseBorderRadii, clampRadii, hasRadius, isUniformRadius, hasOverflowCl
 import { buildRoundedRectPath } from "./utils/geometry.js";
 import { resolveCompat } from "./compat.js";
 import { flattenNestedSvgs } from "./utils/flatten.js";
+import {inlineSvgImages} from "./utils/inline-images";
 
 export type {
   DomToSvgOptions,
@@ -107,6 +108,8 @@ export async function domToSvg(
   if (ctx.compat.flattenNestedSvg) {
     flattenNestedSvgs(svg);
   }
+
+  await inlineSvgImages(svg);
 
   // Remove defs if empty
   if (defs.childNodes.length === 0) {

@@ -1,5 +1,5 @@
 import type { RenderContext } from "../types.js";
-import { SVG_NS, XLINK_NS, splitAlpha } from "../utils/dom.js";
+import {SVG_NS, XLINK_NS, splitAlpha, XMLNS_NS} from "../utils/dom.js";
 
 /** Attribute values needing computed-style resolution */
 const DYNAMIC = /var\(|currentColor/;
@@ -56,9 +56,10 @@ function cloneWithNamespace(
     const value = DYNAMIC.test(attr.value)
         ? styles.getPropertyValue(attr.localName) || attr.value
         : attr.value;
-    if (attr.namespaceURI === XLINK_NS) {
-      clone.setAttributeNS(XLINK_NS, attr.localName, value);
-    } else if (attr.namespaceURI) {
+    if (attr.namespaceURI === XMLNS_NS) {
+      continue;
+    }
+    if (attr.namespaceURI) {
       clone.setAttributeNS(attr.namespaceURI, attr.localName, value);
     } else {
       clone.setAttribute(attr.localName, value);

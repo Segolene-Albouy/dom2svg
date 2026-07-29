@@ -21,7 +21,7 @@ import {
   isVisibilityHidden,
 } from "../core/styles.js";
 import { parseLinearGradient, createSvgLinearGradient, rasterizeGradient } from "../assets/gradients.js";
-import { imageToDataUrl, extractUrlFromCss, canvasToDataUrl } from "../assets/images.js";
+import { fetchAsDataUrl, extractUrlFromCss, canvasToDataUrl } from "../assets/images.js";
 import { cssTransformToSvg } from "../transforms/svg.js";
 import { createSvgFilter } from "../assets/filters.js";
 import { parseBoxShadows, renderBoxShadows } from "../assets/box-shadow.js";
@@ -142,7 +142,7 @@ export async function renderHtmlElement(
 
     // <img> element
     if (isImageElement(element) && element.src) {
-      const dataUrl = await imageToDataUrl(element.src);
+      const dataUrl = await fetchAsDataUrl(element.src);
       const imgEl = createSvgElement(ctx.svgDocument, "image");
       setAttributes(imgEl, {
         x: box.x,
@@ -489,7 +489,7 @@ async function applyMaskImage(
   let imageUrl = url;
   if (!url.startsWith("data:")) {
     try {
-      imageUrl = await imageToDataUrl(url);
+      imageUrl = await fetchAsDataUrl(url);
     } catch {
       return; // Skip if fetch fails
     }
@@ -873,7 +873,7 @@ async function renderSingleBackgroundLayer(
   // Background image URL
   const url = extractUrlFromCss(bgImage);
   if (url) {
-    const dataUrl = await imageToDataUrl(url);
+    const dataUrl = await fetchAsDataUrl(url);
     const imgEl = createSvgElement(ctx.svgDocument, "image");
     setAttributes(imgEl, {
       x: placement.x,
