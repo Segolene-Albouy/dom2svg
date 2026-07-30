@@ -1,5 +1,5 @@
 import type { RenderContext } from "../types.js";
-import {SVG_NS, XLINK_NS, splitAlpha, XMLNS_NS} from "../utils/dom.js";
+import {SVG_NS, XLINK_NS, splitAlpha} from "../utils/dom.js";
 
 /** Attribute values needing computed-style resolution */
 const DYNAMIC = /var\(|currentColor/;
@@ -49,18 +49,19 @@ function cloneWithNamespace(
   // Copy attributes, resolving currentColor and var() against the source node
   const stripStyle = ctx.compat.avoidStyleAttributes;
   for (const attr of Array.from(node.attributes)) {
-    // In compat mode, skip style (CSS variables, z-index) and class (no stylesheet in output)
+    // xmlns declarations are redundant in the output document and are rejected
+    // by setAttributeNS when the parser exposes them with a null namespace
+    if (attr.name === "xmlns" || attr.name.startsWith("xmlns:")) {
+      continue;
+    }
     if (stripStyle && (attr.localName === "style" || attr.localName === "class")) {
       continue;
     }
     const value = DYNAMIC.test(attr.value)
         ? styles.getPropertyValue(attr.localName) || attr.value
         : attr.value;
-    if (attr.namespaceURI === XMLNS_NS) {
-      continue;
-    }
     if (attr.namespaceURI) {
-      clone.setAttributeNS(attr.namespaceURI, attr.localName, value);
+      clone.setAttributeNS(attr.namespaceURI, attr.name, value);
     } else {
       clone.setAttribute(attr.localName, value);
     }
@@ -114,10 +115,12 @@ function resolveUseElement(
   // Copy presentation attributes from <use> (except href and geometry)
   const skipAttrs = new Set(["href", "xlink:href", "x", "y", "width", "height"]);
   for (const attr of Array.from(useEl.attributes)) {
+    if (attr.name === "xmlns" || attr.name.startsWith("xmlns:")) continue;
     if (skipAttrs.has(attr.localName)) continue;
     if (attr.namespaceURI === XLINK_NS) continue;
+
     if (attr.namespaceURI) {
-      group.setAttributeNS(attr.namespaceURI, attr.localName, attr.value);
+      group.setAttributeNS(attr.namespaceURI, attr.name, attr.value);
     } else {
       group.setAttribute(attr.localName, attr.value);
     }
