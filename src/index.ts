@@ -4,7 +4,7 @@ import type {
   RenderContext,
   BorderRadii,
 } from "./types.js";
-import { SVG_NS, XMLNS_NS, createSvgElement, setAttributes } from "./utils/dom.js";
+import {SVG_NS, XMLNS_NS, createSvgElement, setAttributes, splitAlpha} from "./utils/dom.js";
 import { createIdGenerator } from "./utils/id-generator.js";
 import { walkElement } from "./core/traversal.js";
 import { createFontCache } from "./assets/fonts.js";
@@ -110,6 +110,8 @@ export async function domToSvg(
   }
 
   await inlineSvgImages(svg);
+
+  for (const el of [svg, ...Array.from(svg.querySelectorAll("*"))]) splitAlpha(el);
 
   // Remove defs if empty
   if (defs.childNodes.length === 0) {

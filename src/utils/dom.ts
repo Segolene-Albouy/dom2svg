@@ -70,7 +70,8 @@ export function getPseudoStyles(
   return window.getComputedStyle(element, pseudo);
 }
 
-const RGBA = /^rgba\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)[\s,/]+([\d.]+)\s*\)$/;
+const RGBA = /^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)(?:[\s,/]+([\d.]+))?\s*\)$/;
+const SRGB = /^color\(srgb\s+([\d.]+%?)\s+([\d.]+%?)\s+([\d.]+%?)(?:\s*\/\s*([\d.]+%?))?\s*\)$/;
 
 const ALPHA_ATTR: Record<string, string> = {
   fill: "fill-opacity",
@@ -79,15 +80,33 @@ const ALPHA_ATTR: Record<string, string> = {
   "flood-color": "flood-opacity",
 };
 
-/** Split rgba() paints into rgb() + a separate *-opacity attribute (SVG 1.1 compatible) */
+const num = (v: string, scale: number) =>
+    v.endsWith("%") ? parseFloat(v) / 100 * scale : parseFloat(v) * scale;
+
+/** Parse rgb()/rgba()/color(srgb …) into an SVG 1.1 rgb() string plus its alpha */
+function parseColor(value: string): [string, number] | null {
+  const rgb = RGBA.exec(value);
+  const srgb = rgb ? null : SRGB.exec(value);
+  const m = rgb ?? srgb;
+  if (!m) return null;
+  const k = srgb ? 255 : 1;
+  const c = [1, 2, 3].map(i => Math.round(num(m[i], k)));
+  return [`rgb(${c.join(", ")})`, m[4] === undefined ? 1 : num(m[4], 1)];
+}
+
+/** Rewrite paints to SVG 1.1: rgb() + a separate *-opacity attribute */
 export function splitAlpha(el: Element): void {
   for (const [paint, alpha] of Object.entries(ALPHA_ATTR)) {
-    const match = RGBA.exec(el.getAttribute(paint) || "");
-    if (!match) {
+    const parsed = parseColor(el.getAttribute(paint) || "");
+    if (!parsed) {
       continue;
     }
-    el.setAttribute(paint, `rgb(${match[1]}, ${match[2]}, ${match[3]})`);
+    const [rgb, a] = parsed;
+    el.setAttribute(paint, rgb);
+    if (a === 1) {
+      continue;
+    }
     const prev = parseFloat(el.getAttribute(alpha) || "1");
-    el.setAttribute(alpha, (+match[4] * (Number.isNaN(prev) ? 1 : prev)).toFixed(3));
+    el.setAttribute(alpha, (a * (Number.isNaN(prev) ? 1 : prev)).toFixed(3));
   }
 }
